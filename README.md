@@ -17,9 +17,9 @@ It's built entirely on Claude Code's official extension points, [hooks](https://
 Per session:
 
 - **State**: *working*, *needs you* (permission prompt, question, or failure) or *idle*. "Needs you" always sorts first and always wins the icon.
-- **Current action** in plain words, like "Editing values.yaml" or "Running terraform plan".
+- **What it's up to**, in the spirit of Claude Code's own spinner ("Pondering…", "Noodling…"), plus task progress and running subagents.
 - **Progress** from Claude's own todo list, like 4/7 tasks. Claude doesn't know a percentage, so Patter doesn't invent one.
-- **Context window**: percentage and tokens. It turns orange at 80%, since auto-compaction is close.
+- **Context window** as a percentage. It turns orange at 80%, since auto-compaction is close.
 - **Subagents** currently running.
 
 Account-wide: **5-hour window** and **weekly** usage with reset times. These are only reported for Pro/Max subscriptions.

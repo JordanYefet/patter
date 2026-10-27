@@ -70,7 +70,6 @@ struct HUDView: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                clawd
                 Text("Claude Code").font(.system(size: 12, weight: .bold))
                 Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
                     .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
@@ -132,7 +131,7 @@ struct HUDView: View {
         .accessibilityAction { collapsed = false }
     }
 
-    /// Walks while any session works; grey when there are no sessions.
+    /// For the collapsed pill. Walks while any session works; grey with no sessions.
     private var clawd: some View {
         ClawdView(
             walking: model.summary.working > 0,

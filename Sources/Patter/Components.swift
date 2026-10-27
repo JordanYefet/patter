@@ -55,36 +55,6 @@ struct Meter: View {
     }
 }
 
-/// Context-window ring + label.
-struct ContextBadge: View {
-    let context: ContextUsage
-
-    var body: some View {
-        let color = context.isHigh ? Theme.orangeText : Theme.cyanText
-        HStack(spacing: 6) {
-            ZStack {
-                Circle().stroke(Theme.track, lineWidth: 2)
-                Circle()
-                    .trim(from: 0, to: context.usedPercentage / 100)
-                    .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: 11, height: 11)
-
-            HStack(spacing: 0) {
-                Text("Context ")
-                Text(Format.percent(context.usedPercentage)).foregroundStyle(color).fontWeight(.semibold)
-                if let used = context.usedTokens, let size = context.windowSize {
-                    Text(" · \(Format.tokens(used)) / \(Format.tokens(size))")
-                }
-                if context.isHigh { Text(" · compacts soon") }
-            }
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(Theme.textTertiary)
-    }
-}
-
 struct Chip: View {
     let text: String
     var color: Color = Theme.textSecondary

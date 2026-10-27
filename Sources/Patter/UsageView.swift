@@ -14,22 +14,33 @@ struct UsageView: View {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 switch style {
                 case .card:
-                    HStack(alignment: .top, spacing: 16) {
+                    HStack(alignment: .top, spacing: 14) {
                         if let w = usage.fiveHour { LimitBar(title: "5-hour window", window: w, now: context.date) }
+                        if usage.fiveHour != nil && usage.sevenDay != nil { divider }
                         if let w = usage.sevenDay { LimitBar(title: "Weekly", window: w, now: context.date) }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
                 case .compact:
                     // Top-aligned with one-line labels, so both meters sit at the same height.
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
                         if let w = usage.fiveHour { MiniLimit(title: "5h", window: w, now: context.date) }
+                        if usage.fiveHour != nil && usage.sevenDay != nil { divider }
                         if let w = usage.sevenDay { MiniLimit(title: "Week", window: w, now: context.date) }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+    }
+}
+
+extension UsageView {
+    /// Separates the 5-hour and weekly windows so they don't read as one bar.
+    private var divider: some View {
+        Rectangle().fill(Theme.border).frame(width: 1).frame(maxHeight: .infinity)
     }
 }
 
