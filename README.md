@@ -31,7 +31,7 @@ Notifications: when a session needs you, and when a turn longer than 30s (config
 - macOS 14 Sonoma or later
 - Claude Code with hooks support (any recent version)
 - `jq` for the installer (bundled with macOS 15+; otherwise `brew install jq`)
-- Xcode 15+ or the Swift 5.9+ toolchain to build
+- Swift 6 (Xcode 16+, or just the Command Line Tools: `xcode-select --install`). Tests use Swift Testing, so full Xcode is not required
 
 ## Install
 

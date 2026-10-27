@@ -1,48 +1,51 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PulseCore
 
-final class ParsingTests: XCTestCase {
-    func testDecodesEnvelopeWrittenByHookScript() throws {
+@Suite("Parsing and formatting")
+struct ParsingTests {
+    @Test func decodesEnvelopeWrittenByHookScript() throws {
         let json = #"{"_pulse":{"v":1,"ts":1793106794106795,"pid":4242,"kind":"status","term":"ghostty"},"payload":{"session_id":"abc","hook_event_name":"Stop"}}"#
-        let e = try XCTUnwrap(SpoolEvent.decode(Data(json.utf8)))
-        XCTAssertEqual(e.kind, .status)
-        XCTAssertEqual(e.pid, 4242)
-        XCTAssertEqual(e.terminal, "ghostty")
-        XCTAssertEqual(e.sessionID, "abc")
-        XCTAssertEqual(e.time.timeIntervalSince1970, 1_793_106_794.106795, accuracy: 0.000_01)
+        let e = try #require(SpoolEvent.decode(Data(json.utf8)))
+        #expect(e.kind == .status)
+        #expect(e.pid == 4242)
+        #expect(e.terminal == "ghostty")
+        #expect(e.sessionID == "abc")
+        #expect(abs(e.time.timeIntervalSince1970 - 1_793_106_794.106795) < 0.000_01)
     }
 
-    func testRejectsMalformedAndNullPayloads() {
-        XCTAssertNil(SpoolEvent.decode(Data("not json".utf8)))
-        XCTAssertNil(SpoolEvent.decode(Data(#"{"_pulse":{"ts":1},"payload":null}"#.utf8)))
+    @Test func rejectsMalformedAndNullPayloads() {
+        #expect(SpoolEvent.decode(Data("not json".utf8)) == nil)
+        #expect(SpoolEvent.decode(Data(#"{"_pulse":{"ts":1},"payload":null}"#.utf8)) == nil)
     }
 
-    func testActivityDescriptions() {
-        func d(_ tool: String, _ input: [String: Any]) -> String {
-            ActivityDescriber.describe(tool: tool, input: JSONObject(input))
-        }
-        XCTAssertEqual(d("Bash", ["command": "npm test\necho done"]), "Running npm test")
-        XCTAssertEqual(d("Read", ["file_path": "/a/b/main.tf"]), "Reading main.tf")
-        XCTAssertEqual(d("WebFetch", ["url": "https://code.claude.com/docs"]), "Fetching code.claude.com")
-        XCTAssertEqual(d("mcp__linear__list_issues", [:]), "Using linear · list_issues")
-        XCTAssertEqual(d("SomethingNew", [:]), "Using SomethingNew")
+    @Test(arguments: [
+        ("Bash", ["command": "npm test\necho done"], "Running npm test"),
+        ("Read", ["file_path": "/a/b/main.tf"], "Reading main.tf"),
+        ("WebFetch", ["url": "https://code.claude.com/docs"], "Fetching code.claude.com"),
+        ("mcp__linear__list_issues", [:], "Using linear · list_issues"),
+        ("SomethingNew", [:], "Using SomethingNew"),
+    ] as [(String, [String: String], String)])
+    func activityDescriptions(tool: String, input: [String: String], expected: String) {
+        #expect(ActivityDescriber.describe(tool: tool, input: JSONObject(input)) == expected)
     }
 
-    func testFormatting() {
-        XCTAssertEqual(Format.duration(42), "42s")
-        XCTAssertEqual(Format.duration(372), "6m 12s")
-        XCTAssertEqual(Format.duration(8040), "2h 14m")
-        XCTAssertEqual(Format.shortDuration(372), "6m")
-        XCTAssertEqual(Format.tokens(124_312), "124k")
-        XCTAssertEqual(Format.tokens(1_000_000), "1M")
-        XCTAssertEqual(Format.tokens(950), "950")
+    @Test func formatting() {
+        #expect(Format.duration(42) == "42s")
+        #expect(Format.duration(372) == "6m 12s")
+        #expect(Format.duration(8040) == "2h 14m")
+        #expect(Format.shortDuration(372) == "6m")
+        #expect(Format.tokens(124_312) == "124k")
+        #expect(Format.tokens(1_000_000) == "1M")
+        #expect(Format.tokens(950) == "950")
     }
 
-    func testSpoolReaderDrainsInTimestampOrder() throws {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cc-pulse-test-\(UUID().uuidString)")
+    @Test func spoolReaderDrainsInTimestampOrder() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("cc-pulse-test-\(UUID().uuidString)")
         let reader = SpoolReader(directory: dir)
         reader.ensureDirectory()
-        defer { try? FileManager.default.removeItem(at: dir) }
+        defer { try? fm.removeItem(at: dir) }
 
         func write(_ ts: Int64, _ name: String) throws {
             let json = #"{"_pulse":{"v":1,"ts":\#(ts),"pid":1,"kind":"hook","term":""},"payload":{"session_id":"s","hook_event_name":"\#(name)"}}"#
@@ -54,12 +57,12 @@ final class ParsingTests: XCTestCase {
         try Data("{}".utf8).write(to: dir.appendingPathComponent(".tmp.123"))
 
         let events = reader.drain()
-        XCTAssertEqual(events.map(\.hookName), ["UserPromptSubmit", "Stop"])
+        #expect(events.map(\.hookName) == ["UserPromptSubmit", "Stop"])
         // Processed and malformed files are removed; in-flight temp files are left alone.
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: dir.path), [".tmp.123"])
+        #expect(try fm.contentsOfDirectory(atPath: dir.path) == [".tmp.123"])
     }
 
-    func testGitInfoReadsBranchAndWorktrees() throws {
+    @Test func gitInfoReadsBranchAndWorktrees() throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("cc-pulse-git-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -69,9 +72,9 @@ final class ParsingTests: XCTestCase {
         try fm.createDirectory(at: repo.appendingPathComponent("sub/dir"), withIntermediateDirectories: true)
         try "ref: refs/heads/feat/eks-1.31\n".write(to: repo.appendingPathComponent(".git/HEAD"), atomically: true, encoding: .utf8)
 
-        let info = try XCTUnwrap(GitInfo.repo(containing: repo.appendingPathComponent("sub/dir").path))
-        XCTAssertEqual(URL(fileURLWithPath: info.root).lastPathComponent, "repo")
-        XCTAssertEqual(info.branch, "feat/eks-1.31")
+        let info = try #require(GitInfo.repo(containing: repo.appendingPathComponent("sub/dir").path))
+        #expect(URL(fileURLWithPath: info.root).lastPathComponent == "repo")
+        #expect(info.branch == "feat/eks-1.31")
 
         // Worktree: .git is a file pointing elsewhere.
         let wtGit = root.appendingPathComponent("wt-gitdir")
@@ -81,6 +84,6 @@ final class ParsingTests: XCTestCase {
         try fm.createDirectory(at: wt, withIntermediateDirectories: true)
         try "gitdir: \(wtGit.path)\n".write(to: wt.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
 
-        XCTAssertEqual(GitInfo.repo(containing: wt.path)?.branch, "a1b2c3d")
+        #expect(GitInfo.repo(containing: wt.path)?.branch == "a1b2c3d")
     }
 }
