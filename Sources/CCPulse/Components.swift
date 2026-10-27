@@ -1,27 +1,6 @@
 import SwiftUI
 import PulseCore
 
-/// A small rotating arc, used for "working".
-struct Spinner: View {
-    var size: CGFloat = 12
-    var color: Color = Theme.cyanText
-
-    var body: some View {
-        TimelineView(.animation) { context in
-            let angle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360
-            ZStack {
-                Circle().stroke(Theme.track, lineWidth: 2)
-                Circle()
-                    .trim(from: 0, to: 0.28)
-                    .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .rotationEffect(.degrees(angle))
-            }
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel("Working")
-    }
-}
-
 /// An orange dot with a soft ring, used for "needs you".
 struct AttentionDot: View {
     var body: some View {

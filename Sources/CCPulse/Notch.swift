@@ -152,7 +152,7 @@ struct NotchView: View {
         } else if !working.isEmpty {
             HStack(spacing: notch.width) {
                 HStack(spacing: 6) {
-                    Spinner()
+                    ClawdView(walking: true)
                     Text("\(working.count)").font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
                 }
                 .frame(width: 40, alignment: .leading)
