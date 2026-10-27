@@ -100,10 +100,13 @@ struct SessionRow: View {
             }
 
         case .idle:
-            if let last = session.lastTurnDuration {
-                Text("Done in \(Format.duration(last))")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textTertiary)
+            VStack(alignment: .leading, spacing: 6) {
+                if let last = session.lastTurnDuration {
+                    Text("Done in \(Format.duration(last))")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                if style == .full, let ctx = session.context { ContextBadge(context: ctx) }
             }
         }
     }
@@ -123,7 +126,9 @@ struct SessionRow: View {
             if let ctx = session.context { parts.append("ctx \(Format.percent(ctx.usedPercentage))") }
             return parts.isEmpty ? Format.shortDuration(since) : parts.joined(separator: " · ")
         case .idle:
-            return "\(Format.shortDuration(since)) ago"
+            let base = "\(Format.shortDuration(since)) ago"
+            guard style == .compact, let ctx = session.context else { return base }
+            return "\(base) · ctx \(Format.percent(ctx.usedPercentage))"
         }
     }
 }
