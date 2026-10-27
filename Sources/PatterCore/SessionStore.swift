@@ -166,7 +166,7 @@ public final class SessionStore {
         case "UserPromptSubmit":
             setPhase(.working, &s, at: t)
             s.turnStartedAt = t
-            s.activity = "Thinking…"
+            s.activity = WorkingVerb.activity(sessionID: s.id, turnStart: t)
             s.attention = nil
             s.attentionDetail = nil
             if s.tasks?.isComplete == true { s.tasks = nil }
@@ -176,10 +176,9 @@ public final class SessionStore {
             // so don't let PreToolUse of a parallel call hide it.
             if s.phase != .needsInput { setPhase(.working, &s, at: t) }
             if s.turnStartedAt == nil { s.turnStartedAt = t }
-            if let tool {
-                s.activity = ActivityDescriber.describe(tool: tool, input: input)
-                if tool == "TodoWrite", let todos = input?.array("todos") { s.tasks = progress(todos) }
-            }
+            // The turn's verb stays put; the individual tool calls aren't shown.
+            if s.activity == nil { s.activity = WorkingVerb.activity(sessionID: s.id, turnStart: s.turnStartedAt ?? t) }
+            if tool == "TodoWrite", let todos = input?.array("todos") { s.tasks = progress(todos) }
 
         case "PostToolUse", "PostToolUseFailure":
             if s.phase == .needsInput {

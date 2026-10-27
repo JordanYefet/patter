@@ -34,15 +34,28 @@ struct SessionStoreTests {
         #expect(s.phase == .working)
         #expect(s.projectName == "argocd-apps")
         #expect(s.branch == "main")
-        #expect(s.activity == "Thinking…")
+        #expect(WorkingVerb.all.map { "\($0)…" }.contains(s.activity ?? ""))
         #expect(s.terminal == "iTerm.app")
         #expect(store.summary == PatterSummary(working: 1))
     }
 
-    @Test func toolUseDescribesActivity() {
+    @Test func toolUseKeepsTheTurnsVerb() throws {
         store.apply(hook("UserPromptSubmit"))
+        let verb = try #require(store.sessions["s1"]?.activity)
         store.apply(hook("PreToolUse", at: 2, extra: ["tool_name": "Edit", "tool_input": ["file_path": "/code/argocd-apps/apps/values.yaml"]]))
-        #expect(store.sessions["s1"]?.activity == "Editing values.yaml")
+        #expect(store.sessions["s1"]?.activity == verb)
+    }
+
+    @Test func toolUseMidTurnStillGetsAVerb() {
+        // e.g. the app started while a turn was already running
+        store.apply(hook("PreToolUse", at: 2, extra: ["tool_name": "Bash", "tool_input": ["command": "ls"]]))
+        #expect(WorkingVerb.all.map { "\($0)…" }.contains(store.sessions["s1"]?.activity ?? ""))
+    }
+
+    @Test func workingVerbIsStablePerSeedAndVaries() {
+        #expect(WorkingVerb.pick(seed: "s1|1000") == WorkingVerb.pick(seed: "s1|1000"))
+        let picks = Set((0..<30).map { WorkingVerb.pick(seed: "s1|\($0)") })
+        #expect(picks.count >= 5)
     }
 
     @Test func permissionRequestNeedsInputAndEmitsOnce() throws {

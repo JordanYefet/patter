@@ -44,8 +44,8 @@ Files are written to a dotfile first and then `mv`'d, so the reader never sees a
 | Event | Effect on the session | Notification |
 | --- | --- | --- |
 | `SessionStart` | Created as **idle**. `source: clear` resets tasks and context. | |
-| `UserPromptSubmit` | → **working**, starts the turn timer, activity "Thinking…", clears attention. Finished task lists are cleared. | |
-| `PreToolUse` | → **working** (unless waiting on you), activity from the tool, e.g. "Editing values.yaml". `TodoWrite` updates progress. | |
+| `UserPromptSubmit` | → **working**, starts the turn timer, picks the turn's verb ("Pondering…", from `WorkingVerb`, seeded by session + turn start), clears attention. Finished task lists are cleared. | |
+| `PreToolUse` | → **working** (unless waiting on you). Keeps the turn's verb (picks one if the turn started before Patter saw it); individual tool calls aren't shown. `TodoWrite` updates progress. | |
 | `PermissionRequest` | → **needs you**: "Allow Bash" + the command or path. | ✅ needs you |
 | `Notification` (`permission_prompt`) | → **needs you**, unless `PermissionRequest` already did it. | ✅ (once) |
 | `Notification` (`elicitation_dialog`, `agent_needs_input`, …) | → **needs you** with Claude's message. | ✅ |

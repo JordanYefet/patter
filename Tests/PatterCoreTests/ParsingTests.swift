@@ -19,17 +19,6 @@ struct ParsingTests {
         #expect(SpoolEvent.decode(Data(#"{"_patter":{"ts":1},"payload":null}"#.utf8)) == nil)
     }
 
-    @Test(arguments: [
-        ("Bash", ["command": "npm test\necho done"], "Running npm test"),
-        ("Read", ["file_path": "/a/b/main.tf"], "Reading main.tf"),
-        ("WebFetch", ["url": "https://code.claude.com/docs"], "Fetching code.claude.com"),
-        ("mcp__linear__list_issues", [:], "Using linear · list_issues"),
-        ("SomethingNew", [:], "Using SomethingNew"),
-    ] as [(String, [String: String], String)])
-    func activityDescriptions(tool: String, input: [String: String], expected: String) {
-        #expect(ActivityDescriber.describe(tool: tool, input: JSONObject(input)) == expected)
-    }
-
     @Test func formatting() {
         #expect(Format.duration(42) == "42s")
         #expect(Format.duration(372) == "6m 12s")
