@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  swift:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+
+  scripts:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check
+        run: for f in hooks/*.sh scripts/*.sh tests/scripts/*.sh; do zsh -n "$f"; done
+      - name: Script tests
+        run: ./tests/scripts/test_scripts.sh
