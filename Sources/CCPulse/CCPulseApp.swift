@@ -13,7 +13,7 @@ struct CCPulseApp: App {
             MenuContentView()
                 .environmentObject(model)
         } label: {
-            Image(nsImage: MenuBarIcon.image(for: model.summary))
+            MenuBarLabel(model: model)
         }
         .menuBarExtraStyle(.window)
 

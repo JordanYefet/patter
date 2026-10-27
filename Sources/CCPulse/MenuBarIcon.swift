@@ -1,5 +1,50 @@
 import AppKit
+import SwiftUI
 import PulseCore
+
+/// The MenuBarExtra label. Spins the "working" arc by redrawing the icon on a
+/// timer that only runs while a session is working.
+struct MenuBarLabel: View {
+    @ObservedObject var model: AppModel
+    @StateObject private var clock = SpinnerClock()
+
+    private var working: Bool { model.summary.dominantPhase == .working }
+
+    var body: some View {
+        Image(nsImage: MenuBarIcon.image(for: model.summary, spin: clock.angle))
+            .onAppear { clock.run(working) }
+            .onChange(of: working) { _, now in clock.run(now) }
+    }
+}
+
+/// Ticks the spinner angle. Separate from AppModel so only the label redraws
+/// at animation rate, not every view observing the model.
+@MainActor
+final class SpinnerClock: ObservableObject {
+    /// Degrees, clockwise. One revolution per second, like `Spinner`.
+    @Published private(set) var angle: CGFloat = 0
+    private var timer: Timer?
+    private static let fps: Double = 15
+
+    func run(_ on: Bool) {
+        guard on != (timer != nil) else { return }
+        if on {
+            let timer = Timer(timeInterval: 1 / Self.fps, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.angle = (self.angle + 360 / Self.fps).truncatingRemainder(dividingBy: 360)
+                }
+            }
+            // .common so it keeps ticking while the menu is open.
+            RunLoop.main.add(timer, forMode: .common)
+            self.timer = timer
+        } else {
+            timer?.invalidate()
+            timer = nil
+            angle = 0
+        }
+    }
+}
 
 /// Draws the menu bar icon: a terminal glyph plus a state mark.
 ///
@@ -8,7 +53,7 @@ import PulseCore
 /// uses `labelColor`, resolved at draw time, so it follows the menu bar's
 /// light/dark appearance.
 enum MenuBarIcon {
-    static func image(for summary: PulseSummary) -> NSImage {
+    static func image(for summary: PulseSummary, spin: CGFloat = 0) -> NSImage {
         let phase = summary.dominantPhase
         let hasMark = phase == .needsInput || phase == .working
         let width: CGFloat = hasMark ? (phase == .needsInput ? 32 : 28) : 18
@@ -22,7 +67,7 @@ enum MenuBarIcon {
             case .needsInput?:
                 drawBadge(count: summary.needsInput, in: NSRect(x: 18, y: 2, width: 14, height: 14))
             case .working?:
-                drawArc(in: NSRect(x: 19, y: 4.5, width: 9, height: 9))
+                drawArc(in: NSRect(x: 19, y: 4.5, width: 9, height: 9), rotation: spin)
             default:
                 break
             }
@@ -72,14 +117,15 @@ enum MenuBarIcon {
         str.draw(at: NSPoint(x: rect.midX - s.width / 2, y: rect.midY - s.height / 2))
     }
 
-    private static func drawArc(in rect: NSRect) {
+    private static func drawArc(in rect: NSRect, rotation: CGFloat) {
         let track = NSBezierPath(ovalIn: rect)
         track.lineWidth = 2
         NSColor.labelColor.withAlphaComponent(0.25).setStroke()
         track.stroke()
 
         let arc = NSBezierPath()
-        arc.appendArc(withCenter: NSPoint(x: rect.midX, y: rect.midY), radius: rect.width / 2, startAngle: 90, endAngle: 0, clockwise: true)
+        arc.appendArc(withCenter: NSPoint(x: rect.midX, y: rect.midY), radius: rect.width / 2,
+                       startAngle: 90 - rotation, endAngle: -rotation, clockwise: true)
         arc.lineWidth = 2
         arc.lineCapStyle = .round
         NSColor(srgbRed: 0x22 / 255, green: 0xD3 / 255, blue: 0xEE / 255, alpha: 1).setStroke()
