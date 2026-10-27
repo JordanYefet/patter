@@ -34,22 +34,28 @@ struct AttentionDot: View {
     }
 }
 
+/// The leading mark on a session row: walking Clawd, orange dot or check.
 struct PhaseIndicator: View {
     let phase: SessionPhase
 
+    /// Wide enough for Clawd; SessionRow indents its detail line to match.
+    static let width: CGFloat = 16
+
     var body: some View {
-        switch phase {
-        case .needsInput:
-            AttentionDot()
-        case .working:
-            Spinner()
-        case .idle:
-            Image(systemName: "checkmark")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(Theme.textTertiary)
-                .frame(width: 12, height: 12)
-                .accessibilityLabel("Idle")
+        Group {
+            switch phase {
+            case .needsInput:
+                AttentionDot()
+            case .working:
+                ClawdView(walking: true, cell: 0.85)
+            case .idle:
+                Image(systemName: "checkmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .accessibilityLabel("Idle")
+            }
         }
+        .frame(width: Self.width, height: 12)
     }
 }
 

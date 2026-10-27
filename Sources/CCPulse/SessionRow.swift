@@ -48,7 +48,7 @@ struct SessionRow: View {
             }
 
             detail
-                .padding(.leading, 20)
+                .padding(.leading, PhaseIndicator.width + 8)
         }
     }
 
