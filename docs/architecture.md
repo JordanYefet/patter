@@ -1,15 +1,15 @@
 # Architecture
 
-CC Pulse has three parts with one-way data flow:
+Patter has three parts with one-way data flow:
 
 ```
-hooks/pulse-hook.sh, hooks/pulse-statusline.sh   (run by Claude Code)
+hooks/patter-hook.sh, hooks/patter-statusline.sh   (run by Claude Code)
         │  one JSON file per event
         ▼
-~/.cc-pulse/spool/<µs-timestamp>-<pid>.<hook|status>.json
+~/.patter/spool/<µs-timestamp>-<pid>.<hook|status>.json
         │  DispatchSource directory watch + 2 s fallback tick
         ▼
-PulseCore.SpoolReader → SessionStore.apply(event) → [PulseEffect]
+PatterCore.SpoolReader → SessionStore.apply(event) → [PatterEffect]
         │                         │
         ▼                         ▼
    AppModel (@Published)     Notifier (UserNotifications)
@@ -20,11 +20,11 @@ PulseCore.SpoolReader → SessionStore.apply(event) → [PulseEffect]
 
 ## Spool file format
 
-Written by `pulse-hook.sh`:
+Written by `patter-hook.sh`:
 
 ```json
 {
-  "_pulse": { "v": 1, "ts": 1793106794106795, "pid": 4242, "kind": "hook", "term": "iTerm.app" },
+  "_patter": { "v": 1, "ts": 1793106794106795, "pid": 4242, "kind": "hook", "term": "iTerm.app" },
   "payload": { "session_id": "…", "hook_event_name": "PreToolUse", "cwd": "…", "tool_name": "Bash", "tool_input": { … } }
 }
 ```
@@ -62,7 +62,7 @@ Sessions are also removed when their Claude Code PID is gone and they've been si
 
 ## Why these choices
 
-- **Async hooks.** Hooks are on the hot path of every tool call. `async: true` means Claude never waits on CC Pulse, and async hooks can't block or approve anything. CC Pulse is an observer by construction.
+- **Async hooks.** Hooks are on the hot path of every tool call. `async: true` means Claude never waits on Patter, and async hooks can't block or approve anything. Patter is an observer by construction.
 - **No parsing in the hook.** Parsing would need `jq` (or Python) at runtime and makes every tool call slower. The Swift side parses loosely (`JSONObject`), so new or missing fields from future Claude Code versions don't break it.
 - **Files over a socket.** The app can be stopped, restarted or crash without losing state from running sessions, and hooks never fail on "connection refused".
 - **Pure core.** `SessionStore` has no timers or I/O except an injectable git lookup, so the whole state machine is covered by unit tests that run on any platform with Swift.

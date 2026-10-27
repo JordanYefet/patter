@@ -1,6 +1,6 @@
-# CC Pulse
+# Patter
 
-**See what every Claude Code session is doing without switching windows.** CC Pulse is a small native macOS app that shows your sessions in the menu bar, in a floating HUD, or around the MacBook notch. It shows which sessions are working, which are waiting on you, how far along their plans are, how full each context window is, and how much of your 5-hour and weekly limits you've used.
+**A quick glimpse at your Claude Code sessions.** See what every session is doing without switching windows. Patter is a small native macOS app that shows your sessions in the menu bar, in a floating HUD, or around the MacBook notch. It shows which sessions are working, which are waiting on you, how far along their plans are, how full each context window is, and how much of your 5-hour and weekly limits you've used.
 
 It's built entirely on Claude Code's official extension points, [hooks](https://code.claude.com/docs/en/hooks) and the [status line](https://code.claude.com/docs/en/statusline). It doesn't scrape terminals or read transcripts, and it makes no network calls.
 
@@ -18,7 +18,7 @@ Per session:
 
 - **State**: *working*, *needs you* (permission prompt, question, or failure) or *idle*. "Needs you" always sorts first and always wins the icon.
 - **Current action** in plain words, like "Editing values.yaml" or "Running terraform plan".
-- **Progress** from Claude's own todo list, like 4/7 tasks. Claude doesn't know a percentage, so CC Pulse doesn't invent one.
+- **Progress** from Claude's own todo list, like 4/7 tasks. Claude doesn't know a percentage, so Patter doesn't invent one.
 - **Context window**: percentage and tokens. It turns orange at 80%, since auto-compaction is close.
 - **Subagents** currently running.
 
@@ -36,44 +36,46 @@ Notifications: when a session needs you, and when a turn longer than 30s (config
 ## Install
 
 ```sh
-git clone https://github.com/<you>/cc-pulse.git
-cd cc-pulse
+git clone https://github.com/<you>/patter.git
+cd patter
 
 # 1. Register the hooks and status line in ~/.claude/settings.json (backed up first)
 ./scripts/install.sh            # or --dry-run to preview the change
 
 # 2. Build and launch the app
-./scripts/bundle.sh --install   # -> ~/Applications/CC Pulse.app
+./scripts/bundle.sh --install   # -> ~/Applications/Patter.app
 ```
 
 Restart any running `claude` sessions so they pick up the new hooks.
 
-If you already had a status line, it keeps working. The installer saves your command to `~/.cc-pulse/statusline-chain`, and CC Pulse's status line script runs it with the same input and prints its output.
+If you already had a status line, it keeps working. The installer saves your command to `~/.patter/statusline-chain`, and Patter's status line script runs it with the same input and prints its output.
+
+Upgrading from CC Pulse (Patter's old name)? Just run `./scripts/install.sh`. It replaces the old hooks, carries over your status line and removes `~/.cc-pulse`.
 
 ### Uninstall
 
 ```sh
-./scripts/uninstall.sh          # removes only CC Pulse's entries, restores your status line
-./scripts/uninstall.sh --purge  # also deletes ~/.cc-pulse
-rm -rf ~/Applications/"CC Pulse.app"
+./scripts/uninstall.sh          # removes only Patter's entries, restores your status line
+./scripts/uninstall.sh --purge  # also deletes ~/.patter
+rm -rf ~/Applications/"Patter.app"
 ```
 
 ## How it works
 
 ```
- Claude Code session(s)                        ~/.cc-pulse/spool/            CC Pulse.app
+ Claude Code session(s)                        ~/.patter/spool/              Patter.app
  ┌──────────────────────┐   hook events        ┌──────────────────────┐      ┌────────────────────────┐
- │ UserPromptSubmit     │──► pulse-hook.sh ───►│ 1793…795-4242.hook   │─────►│ SpoolReader (watch dir) │
+ │ UserPromptSubmit     │──► patter-hook.sh ──►│ 1793…795-4242.hook   │─────►│ SpoolReader (watch dir) │
  │ PreToolUse / Post…   │    (async, ~2 ms)    │ 1793…812-4243.status │      │ SessionStore (state     │
  │ PermissionRequest    │                      │ …one JSON per event  │      │   machine, pure Swift)  │
  │ Stop / SessionEnd …  │   status line        └──────────────────────┘      │ Menu bar · HUD · Notch  │
- │ status line refresh  │──► pulse-statusline.sh ──┘  (files deleted         └────────────────────────┘
+ │ status line refresh  │──► patter-statusline.sh ─┘  (files deleted         └────────────────────────┘
  └──────────────────────┘    (+ your old one)         once read)
 ```
 
-1. **Hooks**: `pulse-hook.sh` is registered as an `async` command hook for 14 events. It wraps the JSON payload from stdin in a small envelope (timestamp, Claude's PID, `$TERM_PROGRAM`) and writes it atomically into the spool. It doesn't parse anything, needs no dependencies, and always exits 0, so it can never block or break Claude.
-2. **Status line**: context-window and rate-limit data is only given to the status line command, so `pulse-statusline.sh` sends a copy to the spool and then runs your previous status line.
-3. **App**: watches the spool folder, applies events in timestamp order to a pure state machine (`PulseCore`), deletes the files, and renders.
+1. **Hooks**: `patter-hook.sh` is registered as an `async` command hook for 14 events. It wraps the JSON payload from stdin in a small envelope (timestamp, Claude's PID, `$TERM_PROGRAM`) and writes it atomically into the spool. It doesn't parse anything, needs no dependencies, and always exits 0, so it can never block or break Claude.
+2. **Status line**: context-window and rate-limit data is only given to the status line command, so `patter-statusline.sh` sends a copy to the spool and then runs your previous status line.
+3. **App**: watches the spool folder, applies events in timestamp order to a pure state machine (`PatterCore`), deletes the files, and renders.
 
 Why files and not a local HTTP server? Hooks keep working whether or not the app is running. When it starts, it catches up on the sessions that are already running. There's no port, no auth, and nothing listening on your machine.
 
@@ -81,35 +83,35 @@ The event-to-state table is in [docs/architecture.md](docs/architecture.md).
 
 ## Privacy and security
 
-- **Local only.** No network access, no telemetry. Event data lives in `~/.cc-pulse/spool` for milliseconds while the app is running, and is deleted after it's read.
-- **Read-only toward Claude.** The hooks are `async`, so they can't approve, deny or change anything. CC Pulse deliberately doesn't offer remote approval of permission prompts.
-- **What's stored:** hook payloads include tool inputs, such as commands and file paths. They're written only to your home directory and deleted on read. If the app isn't running they accumulate until it next starts. Delete them with `rm ~/.cc-pulse/spool/*`.
-- **Review before installing.** `hooks/pulse-hook.sh` is short and has no dependencies. Reading it is the best way to trust it.
+- **Local only.** No network access, no telemetry. Event data lives in `~/.patter/spool` for milliseconds while the app is running, and is deleted after it's read.
+- **Read-only toward Claude.** The hooks are `async`, so they can't approve, deny or change anything. Patter deliberately doesn't offer remote approval of permission prompts.
+- **What's stored:** hook payloads include tool inputs, such as commands and file paths. They're written only to your home directory and deleted on read. If the app isn't running they accumulate until it next starts. Delete them with `rm ~/.patter/spool/*`.
+- **Review before installing.** `hooks/patter-hook.sh` is short and has no dependencies. Reading it is the best way to trust it.
 
 ## Development
 
 ```sh
 swift build                 # app + core
-./scripts/test.sh           # PulseCore unit tests (`swift test`, works without Xcode)
-swift run CCPulse           # run without bundling (no notifications / launch-at-login)
+./scripts/test.sh           # PatterCore unit tests (`swift test`, works without Xcode)
+swift run Patter           # run without bundling (no notifications / launch-at-login)
 ./scripts/test-scripts.sh   # installer + hook script tests (needs zsh, jq)
 ```
 
 Layout:
 
 ```
-hooks/                 the two scripts Claude Code runs
-scripts/               install / uninstall / bundle
-Sources/PulseCore/     Foundation-only: event parsing, SessionStore, formatting
-Sources/CCPulse/       SwiftUI/AppKit app: menu bar, HUD, notch, notifications
-Tests/PulseCoreTests/  XCTest
-docs/                  architecture and event mapping
+hooks/                  the two scripts Claude Code runs
+scripts/                install / uninstall / bundle / app icon
+Sources/PatterCore/     Foundation-only: event parsing, SessionStore, formatting
+Sources/Patter/         SwiftUI/AppKit app: menu bar, HUD, notch, notifications
+Tests/PatterCoreTests/  Swift Testing
+docs/                   architecture and event mapping
 ```
 
 To test without Claude, drop a file into the spool:
 
 ```sh
-print -r '{"session_id":"demo","hook_event_name":"UserPromptSubmit","cwd":"'$PWD'"}' | hooks/pulse-hook.sh
+print -r '{"session_id":"demo","hook_event_name":"UserPromptSubmit","cwd":"'$PWD'"}' | hooks/patter-hook.sh
 ```
 
 ## Roadmap
