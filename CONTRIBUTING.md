@@ -10,7 +10,7 @@ Thanks for helping. A few ground rules keep CC Pulse trustworthy enough to run o
 ## Setup
 
 ```sh
-swift build && swift test
+swift build && ./scripts/test.sh   # swift test, plus the flags needed without Xcode
 ./scripts/test-scripts.sh
 swift run CCPulse
 ```

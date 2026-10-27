@@ -90,7 +90,7 @@ The event-to-state table is in [docs/architecture.md](docs/architecture.md).
 
 ```sh
 swift build                 # app + core
-swift test                  # PulseCore unit tests (state machine, parsing, formatting)
+./scripts/test.sh           # PulseCore unit tests (`swift test`, works without Xcode)
 swift run CCPulse           # run without bundling (no notifications / launch-at-login)
 ./scripts/test-scripts.sh   # installer + hook script tests (needs zsh, jq)
 ```
