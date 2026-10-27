@@ -38,7 +38,8 @@ final class HUDController {
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.isMovableByWindowBackground = true
+        // Dragging is done by WindowDragArea: NSHostingView never reports
+        // mouseDownCanMoveWindow, so isMovableByWindowBackground has no effect.
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
@@ -92,39 +93,42 @@ struct HUDView: View {
         }
         .padding(8)
         .frame(width: 300)
+        .background(WindowDragArea())
         .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
     }
 
     private var pill: some View {
-        Button { collapsed = false } label: {
-            HStack(spacing: 10) {
-                if model.summary.working > 0 {
-                    HStack(spacing: 5) {
-                        Spinner()
-                        Text("\(model.summary.working)").font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                if model.summary.working > 0, let first = firstBlocked {
-                    Rectangle().fill(Theme.border).frame(width: 1, height: 14)
-                    blocked(first)
-                } else if let first = firstBlocked {
-                    blocked(first)
-                }
-                if model.summary.active == 0 || (model.summary.working == 0 && firstBlocked == nil) {
-                    PhaseIndicator(phase: .idle)
-                    Text("Idle").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+        HStack(spacing: 10) {
+            if model.summary.working > 0 {
+                HStack(spacing: 5) {
+                    Spinner()
+                    Text("\(model.summary.working)").font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
                 }
             }
-            .padding(.leading, 10)
-            .padding(.trailing, 14)
-            .frame(minHeight: 44)
-            .background(Theme.panel.opacity(0.94), in: Capsule())
-            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
-            .contentShape(Capsule())
+            if model.summary.working > 0, let first = firstBlocked {
+                Rectangle().fill(Theme.border).frame(width: 1, height: 14)
+                blocked(first)
+            } else if let first = firstBlocked {
+                blocked(first)
+            }
+            if model.summary.active == 0 || (model.summary.working == 0 && firstBlocked == nil) {
+                PhaseIndicator(phase: .idle)
+                Text("Idle").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 10)
+        .padding(.trailing, 14)
+        .frame(minHeight: 44)
+        // Drag to move, click to expand. A Button would swallow the drag.
+        .background(WindowDragArea { collapsed = false })
+        .background(Theme.panel.opacity(0.94), in: Capsule())
+        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+        .contentShape(Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Expand Claude Code status")
+        .accessibilityAction { collapsed = false }
     }
 
     private var firstBlocked: Session? { model.sessions.first { $0.phase == .needsInput } }
@@ -147,5 +151,46 @@ struct HUDView: View {
         .foregroundStyle(Theme.textSecondary)
         .accessibilityLabel(label)
         .help(label)
+    }
+}
+
+/// Moves the window when dragged; calls `onClick` (if any) when clicked without
+/// moving. Put it behind content: SwiftUI buttons on top keep their clicks.
+struct WindowDragArea: NSViewRepresentable {
+    var onClick: (() -> Void)?
+
+    func makeNSView(context: Context) -> DragView { DragView() }
+
+    func updateNSView(_ view: DragView, context: Context) {
+        view.onClick = onClick
+    }
+
+    final class DragView: NSView {
+        var onClick: (() -> Void)?
+        private var start: (mouse: NSPoint, origin: NSPoint)?
+        private var moved = false
+
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            guard let window else { return }
+            start = (NSEvent.mouseLocation, window.frame.origin)
+            moved = false
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard let window, let start else { return }
+            let mouse = NSEvent.mouseLocation
+            let dx = mouse.x - start.mouse.x, dy = mouse.y - start.mouse.y
+            // A few points of slop so a slightly shaky click still counts as a click.
+            if !moved && hypot(dx, dy) < 3 { return }
+            moved = true
+            window.setFrameOrigin(NSPoint(x: start.origin.x + dx, y: start.origin.y + dy))
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            if !moved { onClick?() }
+            start = nil
+        }
     }
 }
