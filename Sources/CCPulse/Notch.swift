@@ -12,6 +12,8 @@ final class NotchController {
     private weak var model: AppModel?
     private var panel: NSPanel?
     private var resizeObserver: NSObjectProtocol?
+    private var screenObserver: NSObjectProtocol?
+    private var wantsVisible = false
 
     static var hasNotch: Bool { notchScreen != nil }
 
@@ -31,17 +33,35 @@ final class NotchController {
 
     init(model: AppModel) {
         self.model = model
+        // Displays come and go (external monitor, lid closed or opened), so
+        // re-check for the notched screen instead of deciding once at launch.
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.screensChanged() }
+        }
     }
 
     func setVisible(_ visible: Bool) {
-        guard Self.hasNotch else { return }
-        if visible {
+        wantsVisible = visible
+        if visible, Self.hasNotch {
             makePanelIfNeeded()
             panel?.orderFrontRegardless()
             recenter()
         } else {
             panel?.orderOut(nil)
         }
+    }
+
+    private func screensChanged() {
+        // The notch size is baked into the hosted view, so rebuild it.
+        if let panel {
+            panel.orderOut(nil)
+            if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) }
+            resizeObserver = nil
+            self.panel = nil
+        }
+        setVisible(wantsVisible)
     }
 
     private func makePanelIfNeeded() {

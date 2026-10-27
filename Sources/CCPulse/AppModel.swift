@@ -49,7 +49,8 @@ final class AppModel: ObservableObject {
         let d = UserDefaults.standard
         d.register(defaults: [
             Keys.showHUD: false,
-            Keys.showNotch: NotchController.hasNotch,
+            // On by default; NotchController only shows it while a notched screen exists.
+            Keys.showNotch: true,
             Keys.notifyNeedsInput: true,
             Keys.notifyFinished: true,
             Keys.notifyAfter: 30.0,
