@@ -73,7 +73,7 @@ final class MenuBarClock: ObservableObject {
         let interval: TimeInterval
         switch mode {
         case .stopped: return
-        case .walking: interval = 1 / 7   // 7 steps a second
+        case .walking: interval = 1 / Clawd.stepsPerSecond
         case .countdown: interval = 20     // minute-resolution countdown
         }
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
@@ -98,22 +98,11 @@ final class MenuBarClock: ObservableObject {
 /// bar's light/dark appearance.
 enum MenuBarIcon {
     private static let height: CGFloat = 18
-    /// Clawd's pixels are twice as tall as wide, like the quadrant characters
-    /// of its terminal art. cell = pixel width.
     private static let cell: CGFloat = 1.15
     private static let clawdWidth: CGFloat = 21
     private static let badgeCenter = NSPoint(x: 18.5, y: 12.5)
     private static let badgeRadius: CGFloat = 4.4
     private static let countdownFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-
-    // Pixel columns per row, from the startup art. Row 1 has the eye holes.
-    private static let body: [[Int]] = [
-        Array(3...14),
-        [3, 4] + Array(6...11) + [13, 14],
-        Array(1...16),
-        Array(3...14),
-    ]
-    private static let outerLegs = [4, 13], innerLegs = [6, 11]
 
     static func image(for state: MenuBarState, frame: Int, now: Date) -> NSImage {
         var countdown: NSAttributedString?
@@ -168,37 +157,10 @@ enum MenuBarIcon {
         }
     }
 
-    /// `frame` nil = standing still; otherwise one of 4 walk-cycle frames:
-    /// leg pairs alternate, the body bobs on every other step and sways.
     private static func drawClawd(color: NSColor, frame: Int?) {
-        let w = cell, h = cell * 2
-        let origin = NSPoint(x: 0, y: (height - 5 * h) / 2)
-        let step = (frame ?? 0) % 2
-        let bob: CGFloat = frame != nil && step == 1 ? -w / 2 : 0
-        let sway: CGFloat = frame.map { $0 % 4 < 2 ? -w / 2 : w / 2 } ?? 0
-        let x0 = origin.x + w / 2 + sway  // half a cell of room for the sway
-
-        // One path, filled once: filling each pixel separately leaves
-        // anti-aliased seams between them at fractional coordinates.
-        let path = NSBezierPath()
-        for (row, cols) in body.enumerated() {
-            for col in cols {
-                path.appendRect(NSRect(x: x0 + CGFloat(col) * w, y: origin.y + CGFloat(row) * h + bob, width: w, height: h))
-            }
-        }
-        func legs(_ cols: [Int], up: Bool) {
-            for col in cols {
-                // A lifted leg is shorter; planted legs stretch to the ground while the body bobs.
-                path.appendRect(NSRect(x: x0 + CGFloat(col) * w, y: origin.y + 4 * h + bob, width: w, height: up ? h * 0.45 : h - bob))
-            }
-        }
-        if frame == nil {
-            legs(outerLegs, up: false)
-            legs(innerLegs, up: false)
-        } else {
-            legs(outerLegs, up: step == 1)
-            legs(innerLegs, up: step == 0)
-        }
+        let size = Clawd.size(cell: cell)
+        let path = NSBezierPath(cgPath: Clawd.path(cell: cell, frame: frame))
+        path.transform(using: AffineTransform(translationByX: 0, byY: (height - size.height) / 2))
         color.setFill()
         path.fill()
     }

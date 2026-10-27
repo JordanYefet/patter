@@ -70,6 +70,7 @@ struct HUDView: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
+                clawd
                 Text("Claude Code").font(.system(size: 12, weight: .bold))
                 Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
                     .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
@@ -101,8 +102,8 @@ struct HUDView: View {
     private var pill: some View {
         HStack(spacing: 10) {
             if model.summary.working > 0 {
-                HStack(spacing: 5) {
-                    Spinner()
+                HStack(spacing: 6) {
+                    clawd
                     Text("\(model.summary.working)").font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
                 }
             }
@@ -113,7 +114,7 @@ struct HUDView: View {
                 blocked(first)
             }
             if model.summary.active == 0 || (model.summary.working == 0 && firstBlocked == nil) {
-                PhaseIndicator(phase: .idle)
+                clawd
                 Text("Idle").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
             }
         }
@@ -129,6 +130,14 @@ struct HUDView: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Expand Claude Code status")
         .accessibilityAction { collapsed = false }
+    }
+
+    /// Walks while any session works; grey when there are no sessions.
+    private var clawd: some View {
+        ClawdView(
+            walking: model.summary.working > 0,
+            color: model.summary.active == 0 ? Theme.textTertiary.opacity(0.6) : Theme.clawd
+        )
     }
 
     private var firstBlocked: Session? { model.sessions.first { $0.phase == .needsInput } }
