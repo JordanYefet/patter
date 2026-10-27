@@ -1,6 +1,6 @@
 import AppKit
 import Combine
-import PulseCore
+import PatterCore
 
 /// Owns the store, watches the spool directory and publishes state to the UI.
 @MainActor
@@ -9,7 +9,7 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var sessions: [Session] = []
     @Published private(set) var usage: UsageLimits?
-    @Published private(set) var summary = PulseSummary()
+    @Published private(set) var summary = PatterSummary()
 
     // Preferences (persisted in UserDefaults).
     @Published var showHUD: Bool { didSet { defaults.set(showHUD, forKey: Keys.showHUD); hud.setVisible(showHUD) } }
@@ -42,11 +42,26 @@ final class AppModel: ObservableObject {
         static let notifyNeedsInput = "notifyNeedsInput"
         static let notifyFinished = "notifyFinished"
         static let notifyAfter = "notifyAfterSeconds"
+        static let migratedFromCCPulse = "migratedFromCCPulse"
+    }
+
+    /// One-time migration from the CC Pulse name; remove after a while.
+    /// Copies the user's toggles from the old defaults domain. Window frames
+    /// are left behind on purpose (the HUD position resets).
+    private static func migrateFromCCPulse(into d: UserDefaults) {
+        guard !d.bool(forKey: Keys.migratedFromCCPulse) else { return }
+        d.set(true, forKey: Keys.migratedFromCCPulse)
+        guard let old = UserDefaults(suiteName: "io.github.cc-pulse") else { return }
+        let keys = [Keys.showHUD, Keys.showNotch, Keys.notifyNeedsInput, Keys.notifyFinished, Keys.notifyAfter, "hudCollapsed"]
+        for key in keys where d.object(forKey: key) == nil {
+            if let value = old.object(forKey: key) { d.set(value, forKey: key) }
+        }
     }
 
     private init() {
         // A local: `self.defaults` can't be read until every stored property is set.
         let d = UserDefaults.standard
+        Self.migrateFromCCPulse(into: d)
         d.register(defaults: [
             Keys.showHUD: false,
             // On by default; NotchController only shows it while a notched screen exists.
@@ -94,7 +109,7 @@ final class AppModel: ObservableObject {
         TerminalActivator.activate(terminal: session.terminal)
     }
 
-    private func deliver(_ effects: [PulseEffect]) {
+    private func deliver(_ effects: [PatterEffect]) {
         guard !notificationsMuted else { return }
         for effect in effects {
             switch effect {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// One session. `.full` is the menu bar dropdown, `.compact` the HUD and notch.
 struct SessionRow: View {

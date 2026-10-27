@@ -1,5 +1,5 @@
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// The cyan palette from the mockups. Panels are always dark, like the menu bar.
 enum Theme {

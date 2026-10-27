@@ -1,10 +1,10 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
-import PulseCore
+import PatterCore
 
 @main
-struct CCPulseApp: App {
+struct PatterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @ObservedObject private var model = AppModel.shared
 

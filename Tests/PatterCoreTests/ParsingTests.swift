@@ -1,11 +1,11 @@
 import Foundation
 import Testing
-@testable import PulseCore
+@testable import PatterCore
 
 @Suite("Parsing and formatting")
 struct ParsingTests {
     @Test func decodesEnvelopeWrittenByHookScript() throws {
-        let json = #"{"_pulse":{"v":1,"ts":1793106794106795,"pid":4242,"kind":"status","term":"ghostty"},"payload":{"session_id":"abc","hook_event_name":"Stop"}}"#
+        let json = #"{"_patter":{"v":1,"ts":1793106794106795,"pid":4242,"kind":"status","term":"ghostty"},"payload":{"session_id":"abc","hook_event_name":"Stop"}}"#
         let e = try #require(SpoolEvent.decode(Data(json.utf8)))
         #expect(e.kind == .status)
         #expect(e.pid == 4242)
@@ -16,7 +16,7 @@ struct ParsingTests {
 
     @Test func rejectsMalformedAndNullPayloads() {
         #expect(SpoolEvent.decode(Data("not json".utf8)) == nil)
-        #expect(SpoolEvent.decode(Data(#"{"_pulse":{"ts":1},"payload":null}"#.utf8)) == nil)
+        #expect(SpoolEvent.decode(Data(#"{"_patter":{"ts":1},"payload":null}"#.utf8)) == nil)
     }
 
     @Test(arguments: [
@@ -66,13 +66,13 @@ struct ParsingTests {
 
     @Test func spoolReaderDrainsInTimestampOrder() throws {
         let fm = FileManager.default
-        let dir = fm.temporaryDirectory.appendingPathComponent("cc-pulse-test-\(UUID().uuidString)")
+        let dir = fm.temporaryDirectory.appendingPathComponent("patter-test-\(UUID().uuidString)")
         let reader = SpoolReader(directory: dir)
         reader.ensureDirectory()
         defer { try? fm.removeItem(at: dir) }
 
         func write(_ ts: Int64, _ name: String) throws {
-            let json = #"{"_pulse":{"v":1,"ts":\#(ts),"pid":1,"kind":"hook","term":""},"payload":{"session_id":"s","hook_event_name":"\#(name)"}}"#
+            let json = #"{"_patter":{"v":1,"ts":\#(ts),"pid":1,"kind":"hook","term":""},"payload":{"session_id":"s","hook_event_name":"\#(name)"}}"#
             try Data(json.utf8).write(to: dir.appendingPathComponent("\(ts)-1.hook.json"))
         }
         try write(2_000_000, "Stop")
@@ -88,7 +88,7 @@ struct ParsingTests {
 
     @Test func gitInfoReadsBranchAndWorktrees() throws {
         let fm = FileManager.default
-        let root = fm.temporaryDirectory.appendingPathComponent("cc-pulse-git-\(UUID().uuidString)")
+        let root = fm.temporaryDirectory.appendingPathComponent("patter-git-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
 
         let repo = root.appendingPathComponent("repo")

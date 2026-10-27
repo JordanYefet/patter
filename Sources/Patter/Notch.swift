@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// Wraps the MacBook notch: small "ears" while sessions run, wider and orange
 /// when one needs you, and the full list on hover.

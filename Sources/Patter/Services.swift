@@ -1,5 +1,5 @@
 import AppKit
-import PulseCore
+import PatterCore
 import UserNotifications
 
 /// macOS notifications. Only works when running from the .app bundle
@@ -14,7 +14,7 @@ final class Notifier {
         center?.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    func post(_ effect: PulseEffect) {
+    func post(_ effect: PatterEffect) {
         guard let center else { return }
         let content = UNMutableNotificationContent()
         let id: String

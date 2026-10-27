@@ -13,11 +13,11 @@ public final class SpoolReader {
         self.fileManager = fileManager
     }
 
-    /// `~/.cc-pulse/spool`, or `$CC_PULSE_HOME/spool`.
+    /// `~/.patter/spool`, or `$PATTER_HOME/spool`.
     public static var defaultDirectory: URL {
         let env = ProcessInfo.processInfo.environment
-        let home = env["CC_PULSE_HOME"].map { URL(fileURLWithPath: $0) }
-            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".cc-pulse")
+        let home = env["PATTER_HOME"].map { URL(fileURLWithPath: $0) }
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".patter")
         return home.appendingPathComponent("spool")
     }
 

@@ -1,5 +1,5 @@
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// An orange dot with a soft ring, used for "needs you".
 struct AttentionDot: View {

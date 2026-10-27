@@ -1,5 +1,5 @@
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// The dropdown under the menu bar icon.
 struct MenuContentView: View {
@@ -37,7 +37,7 @@ struct MenuContentView: View {
             .buttonStyle(.plain)
             .keyboardShortcut(",", modifiers: .command)
             Button { NSApp.terminate(nil) } label: {
-                MenuItemLabel(title: "Quit CC Pulse", shortcut: "⌘Q")
+                MenuItemLabel(title: "Quit Patter", shortcut: "⌘Q")
             }
             .buttonStyle(.plain)
             .keyboardShortcut("q", modifiers: .command)

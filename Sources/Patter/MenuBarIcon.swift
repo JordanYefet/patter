@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// What the menu bar icon shows, highest priority first.
 enum MenuBarState: Equatable {
@@ -11,7 +11,7 @@ enum MenuBarState: Equatable {
     case idle
     case noSessions
 
-    init(summary: PulseSummary, usage: UsageLimits?, now: Date) {
+    init(summary: PatterSummary, usage: UsageLimits?, now: Date) {
         if let until = usage?.blockedUntil(now: now) {
             self = .limited(until: until)
         } else {

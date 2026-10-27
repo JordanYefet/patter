@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// A small always-on-top panel. Never takes focus, follows you across Spaces,
 /// drag it anywhere (the position is remembered).
@@ -45,11 +45,11 @@ final class HUDController {
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
 
-        if !panel.setFrameUsingName("CCPulseHUD"), let screen = NSScreen.main {
+        if !panel.setFrameUsingName("PatterHUD"), let screen = NSScreen.main {
             let visible = screen.visibleFrame
             panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - 300 - 24, y: visible.maxY - 16))
         }
-        panel.setFrameAutosaveName("CCPulseHUD")
+        panel.setFrameAutosaveName("PatterHUD")
         self.panel = panel
     }
 }

@@ -27,8 +27,8 @@ public final class SessionStore {
         }
     }
 
-    public var summary: PulseSummary {
-        var s = PulseSummary()
+    public var summary: PatterSummary {
+        var s = PatterSummary()
         for session in sessions.values {
             switch session.phase {
             case .working: s.working += 1
@@ -42,7 +42,7 @@ public final class SessionStore {
     // MARK: - Applying events
 
     @discardableResult
-    public func apply(_ event: SpoolEvent) -> [PulseEffect] {
+    public func apply(_ event: SpoolEvent) -> [PatterEffect] {
         guard let id = event.sessionID, !id.isEmpty else { return [] }
 
         if event.hookName == "SessionEnd" {
@@ -53,7 +53,7 @@ public final class SessionStore {
         var session = sessions[id] ?? newSession(id: id, event: event)
         touch(&session, with: event)
 
-        var effects: [PulseEffect] = []
+        var effects: [PatterEffect] = []
         switch event.kind {
         case .status:
             applyStatus(event, to: &session)
@@ -148,7 +148,7 @@ public final class SessionStore {
         }
     }
 
-    private func applyHook(_ event: SpoolEvent, to s: inout Session) -> [PulseEffect] {
+    private func applyHook(_ event: SpoolEvent, to s: inout Session) -> [PatterEffect] {
         let p = event.payload
         let t = event.time
         let tool = p.string("tool_name")
@@ -250,7 +250,7 @@ public final class SessionStore {
         return []
     }
 
-    private func needsInput(_ s: inout Session, at t: Date, title: String, detail: String?) -> [PulseEffect] {
+    private func needsInput(_ s: inout Session, at t: Date, title: String, detail: String?) -> [PatterEffect] {
         let wasWaiting = s.phase == .needsInput
         setPhase(.needsInput, &s, at: t)
         s.attention = title

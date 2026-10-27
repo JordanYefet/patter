@@ -1,5 +1,5 @@
 import SwiftUI
-import PulseCore
+import PatterCore
 
 /// 5-hour and weekly limits. Only Pro/Max subscriptions report these, and only
 /// after the first response in a session, so this view hides when there's no data.

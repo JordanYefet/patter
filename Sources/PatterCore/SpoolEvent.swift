@@ -1,11 +1,11 @@
 import Foundation
 
-/// One file from the spool directory: the envelope written by `pulse-hook.sh`
+/// One file from the spool directory: the envelope written by `patter-hook.sh`
 /// plus the raw Claude Code payload.
 ///
 /// File shape:
 /// ```json
-/// {"_pulse": {"v":1, "ts":1793106794106795, "pid":4242, "kind":"hook", "term":"iTerm.app"},
+/// {"_patter": {"v":1, "ts":1793106794106795, "pid":4242, "kind":"hook", "term":"iTerm.app"},
 ///  "payload": { ...whatever Claude Code sent on stdin... }}
 /// ```
 /// The payload is parsed loosely on purpose: Claude Code adds fields often,
@@ -40,7 +40,7 @@ public struct SpoolEvent {
     public static func decode(_ data: Data) -> SpoolEvent? {
         guard
             let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-            let meta = root["_pulse"] as? [String: Any],
+            let meta = root["_patter"] as? [String: Any],
             let payload = root["payload"] as? [String: Any]
         else { return nil }
 

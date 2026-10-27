@@ -89,7 +89,7 @@ public struct TaskProgress: Equatable, Sendable {
     public var isComplete: Bool { total > 0 && done >= total }
 }
 
-/// Everything CC Pulse knows about one Claude Code session.
+/// Everything Patter knows about one Claude Code session.
 public struct Session: Identifiable, Equatable, Sendable {
     public let id: String
     public var cwd: String
@@ -145,7 +145,7 @@ public struct Session: Identifiable, Equatable, Sendable {
 }
 
 /// Counts for the menu bar icon.
-public struct PulseSummary: Equatable, Sendable {
+public struct PatterSummary: Equatable, Sendable {
     public var working: Int = 0
     public var needsInput: Int = 0
     public var idle: Int = 0
@@ -168,7 +168,7 @@ public struct PulseSummary: Equatable, Sendable {
 }
 
 /// Side effects the app should perform after an event (notifications).
-public enum PulseEffect: Equatable, Sendable {
+public enum PatterEffect: Equatable, Sendable {
     case needsInput(sessionID: String, project: String, message: String)
     case finished(sessionID: String, project: String, duration: TimeInterval, tasks: TaskProgress?)
 }

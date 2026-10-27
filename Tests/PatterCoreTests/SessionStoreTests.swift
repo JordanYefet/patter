@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PulseCore
+@testable import PatterCore
 
 @Suite("SessionStore")
 struct SessionStoreTests {
@@ -36,7 +36,7 @@ struct SessionStoreTests {
         #expect(s.branch == "main")
         #expect(s.activity == "Thinking…")
         #expect(s.terminal == "iTerm.app")
-        #expect(store.summary == PulseSummary(working: 1))
+        #expect(store.summary == PatterSummary(working: 1))
     }
 
     @Test func toolUseDescribesActivity() {
