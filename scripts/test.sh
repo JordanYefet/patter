@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Run the PulseCore unit tests (`swift test`), including on machines that have
+# Run the PatterCore unit tests (`swift test`), including on machines that have
 # only the Command Line Tools.
 #
 #   ./scripts/test.sh [swift test args...]

@@ -1,12 +1,12 @@
 #!/bin/zsh
-# cc-pulse hook — drops the Claude Code hook payload into the spool directory.
+# Patter hook — drops the Claude Code hook payload into the spool directory.
 #
 # Claude Code pipes a JSON payload to this script on stdin for every hook event
 # it is registered for. We don't parse it here (no jq dependency, ~2 ms runtime):
 # we wrap it with a tiny envelope and write it atomically into the spool, where
-# the CC Pulse app picks it up and deletes it.
+# the Patter app picks it up and deletes it.
 #
-# Usage: pulse-hook.sh [kind]      kind = "hook" (default) or "status"
+# Usage: patter-hook.sh [kind]      kind = "hook" (default) or "status"
 #
 # Design rules:
 #   * never block Claude: registered with "async": true, and always exits 0
@@ -18,8 +18,8 @@ zmodload zsh/datetime 2>/dev/null
 kind="${1:-hook}"
 [[ "$kind" == (hook|status) ]] || kind="hook"
 
-pulse_home="${CC_PULSE_HOME:-$HOME/.cc-pulse}"
-spool="$pulse_home/spool"
+patter_home="${PATTER_HOME:-$HOME/.patter}"
+spool="$patter_home/spool"
 mkdir -p "$spool" 2>/dev/null || exit 0
 
 # Microsecond timestamp: orders events, and the app uses it as the event time.
@@ -45,7 +45,7 @@ term="${TERM_PROGRAM//[^A-Za-z0-9._-]/}"
 
 tmp="$spool/.tmp.$$.$RANDOM"
 {
-  print -rn -- "{\"_pulse\":{\"v\":1,\"ts\":$ts,\"pid\":$claude_pid,\"kind\":\"$kind\",\"term\":\"$term\"},\"payload\":"
+  print -rn -- "{\"_patter\":{\"v\":1,\"ts\":$ts,\"pid\":$claude_pid,\"kind\":\"$kind\",\"term\":\"$term\"},\"payload\":"
   payload="$(cat)"
   if [[ -n "$payload" ]]; then print -rn -- "$payload"; else print -rn -- "null"; fi
   print -r -- "}"
