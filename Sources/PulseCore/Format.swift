@@ -22,6 +22,12 @@ public enum Format {
         return duration(seconds)
     }
 
+    /// Time left on a menu bar countdown that updates once a minute, so no
+    /// seconds: "3d 7h", "2h 14m", "14m", "<1m".
+    public static func countdown(_ seconds: TimeInterval) -> String {
+        seconds < 60 ? "<1m" : shortDuration(seconds)
+    }
+
     /// 124_312 -> "124k", 1_000_000 -> "1M", 950 -> "950"
     public static func tokens(_ n: Int) -> String {
         if n >= 1_000_000 {

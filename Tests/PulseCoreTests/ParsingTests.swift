@@ -38,6 +38,30 @@ struct ParsingTests {
         #expect(Format.tokens(124_312) == "124k")
         #expect(Format.tokens(1_000_000) == "1M")
         #expect(Format.tokens(950) == "950")
+        #expect(Format.countdown(8040) == "2h 14m")
+        #expect(Format.countdown(840) == "14m")
+        #expect(Format.countdown(285_000) == "3d 7h")
+        #expect(Format.countdown(42) == "<1m")
+    }
+
+    @Test func blockedUntilNeedsAFullWindowThatHasNotReset() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let soon = now.addingTimeInterval(3_600), later = now.addingTimeInterval(86_400)
+        func limits(_ five: LimitWindow?, _ week: LimitWindow?) -> UsageLimits {
+            UsageLimits(fiveHour: five, sevenDay: week, updatedAt: now)
+        }
+
+        #expect(limits(LimitWindow(usedPercentage: 99, resetsAt: soon), nil).blockedUntil(now: now) == nil)
+        #expect(limits(LimitWindow(usedPercentage: 100, resetsAt: soon), nil).blockedUntil(now: now) == soon)
+        #expect(limits(nil, LimitWindow(usedPercentage: 100, resetsAt: later)).blockedUntil(now: now) == later)
+        // Both used up: you're back only when the later one resets.
+        #expect(limits(LimitWindow(usedPercentage: 100, resetsAt: soon),
+                       LimitWindow(usedPercentage: 100, resetsAt: later)).blockedUntil(now: now) == later)
+        // Past the reset time the snapshot is stale: no longer blocked.
+        #expect(limits(LimitWindow(usedPercentage: 100, resetsAt: soon), nil)
+            .blockedUntil(now: soon.addingTimeInterval(1)) == nil)
+        // No reset time means no countdown to show.
+        #expect(limits(LimitWindow(usedPercentage: 100), nil).blockedUntil(now: now) == nil)
     }
 
     @Test func spoolReaderDrainsInTimestampOrder() throws {

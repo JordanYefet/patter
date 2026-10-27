@@ -10,7 +10,7 @@ It's built entirely on Claude Code's official extension points, [hooks](https://
 
 | Placement | Best for |
 | --- | --- |
-| **Menu bar** (always on) | The full picture: each session's project, branch, current action, task progress, context window, plus account usage at the top. The icon shows a spinner while anything is working and an orange badge with a count when sessions need you. |
+| **Menu bar** (always on) | The full picture: each session's project, branch, current action, task progress, context window, plus account usage at the top. The icon is Clawd, the Claude Code mascot: it walks while anything is working, stands still when done, gets a yellow badge with a count when sessions need you, and turns grey with a red "!" and a countdown when you've hit your 5-hour or weekly limit. |
 | **Floating HUD** | A big single monitor. Always on top, never steals focus, drag it anywhere, collapse it to a pill. |
 | **Notch** | Notched MacBooks. "Ears" grow out of the notch while sessions run, turn orange when one needs you, and the full list drops down on hover. |
 

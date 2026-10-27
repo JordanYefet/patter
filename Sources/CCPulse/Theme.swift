@@ -21,6 +21,14 @@ enum Theme {
     static let orangeText = Color(hex: 0xFDBA74)
     static let onOrange = Color(hex: 0x1A1206)
 
+    /// Menu bar mascot (Clawd) and its badges. The menu bar can be light or
+    /// dark, so these are chosen to read on both.
+    static let clawd = Color(hex: 0xD97757)
+    static let badgeNeedsYou = Color(hex: 0xFACC15)
+    static let onBadgeNeedsYou = Color(hex: 0x1A1206)
+    static let badgeLimit = Color(hex: 0xF87171)
+    static let onBadgeLimit = Color(hex: 0x1A0606)
+
     static let mono = Font.system(size: 11, design: .monospaced)
 
     static func color(for phase: SessionPhase) -> Color {

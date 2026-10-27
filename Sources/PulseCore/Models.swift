@@ -61,6 +61,18 @@ public struct UsageLimits: Equatable, Sendable {
         self.sevenDay = sevenDay
         self.updatedAt = updatedAt
     }
+
+    /// When you can work again, if a limit is used up right now: the latest
+    /// reset among full windows. Nil once that time passes (the snapshot is
+    /// stale by then) or when there's no reset time to count down to.
+    public func blockedUntil(now: Date) -> Date? {
+        [fiveHour, sevenDay]
+            .compactMap { $0 }
+            .filter { $0.usedPercentage >= 100 }
+            .compactMap(\.resetsAt)
+            .filter { $0 > now }
+            .max()
+    }
 }
 
 /// Progress through Claude's own todo list for the current piece of work.
