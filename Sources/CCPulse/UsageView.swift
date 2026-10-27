@@ -22,7 +22,8 @@ struct UsageView: View {
                     .padding(.vertical, 10)
                     .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
                 case .compact:
-                    HStack(spacing: 12) {
+                    // Top-aligned with one-line labels, so both meters sit at the same height.
+                    HStack(alignment: .top, spacing: 12) {
                         if let w = usage.fiveHour { MiniLimit(title: "5h", window: w, now: context.date) }
                         if let w = usage.sevenDay { MiniLimit(title: "Week", window: w, now: context.date) }
                     }
@@ -65,11 +66,14 @@ private struct MiniLimit: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(label).foregroundStyle(Theme.textTertiary)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 4)
                 Text(Format.percent(window.usedPercentage))
                     .foregroundStyle(window.isHigh ? Theme.orangeText : Theme.text)
                     .fontWeight(.semibold)
                     .monospacedDigit()
+                    .layoutPriority(1)
             }
             .font(.system(size: 10))
             Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? Theme.orange : Theme.cyan, height: 3)
