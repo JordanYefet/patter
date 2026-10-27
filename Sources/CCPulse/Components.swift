@@ -1,0 +1,132 @@
+import SwiftUI
+import PulseCore
+
+/// A small rotating arc, used for "working".
+struct Spinner: View {
+    var size: CGFloat = 12
+    var color: Color = Theme.cyanText
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            let angle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360
+            ZStack {
+                Circle().stroke(Theme.track, lineWidth: 2)
+                Circle()
+                    .trim(from: 0, to: 0.28)
+                    .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(angle))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel("Working")
+    }
+}
+
+/// An orange dot with a soft ring, used for "needs you".
+struct AttentionDot: View {
+    var body: some View {
+        Circle()
+            .fill(Theme.orange)
+            .frame(width: 8, height: 8)
+            .overlay(Circle().stroke(Theme.orange.opacity(0.28), lineWidth: 3).frame(width: 14, height: 14))
+            .frame(width: 12, height: 12)
+            .accessibilityLabel("Needs you")
+    }
+}
+
+struct PhaseIndicator: View {
+    let phase: SessionPhase
+
+    var body: some View {
+        switch phase {
+        case .needsInput:
+            AttentionDot()
+        case .working:
+            Spinner()
+        case .idle:
+            Image(systemName: "checkmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Theme.textTertiary)
+                .frame(width: 12, height: 12)
+                .accessibilityLabel("Idle")
+        }
+    }
+}
+
+/// Horizontal progress bar.
+struct Meter: View {
+    let fraction: Double
+    var color: Color = Theme.cyan
+    var height: CGFloat = 4
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Theme.track)
+                Capsule().fill(color).frame(width: geo.size.width * min(1, max(0, fraction)))
+            }
+        }
+        .frame(height: height)
+    }
+}
+
+/// Context-window ring + label.
+struct ContextBadge: View {
+    let context: ContextUsage
+
+    var body: some View {
+        let color = context.isHigh ? Theme.orangeText : Theme.cyanText
+        HStack(spacing: 6) {
+            ZStack {
+                Circle().stroke(Theme.track, lineWidth: 2)
+                Circle()
+                    .trim(from: 0, to: context.usedPercentage / 100)
+                    .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 11, height: 11)
+
+            HStack(spacing: 0) {
+                Text("Context ")
+                Text(Format.percent(context.usedPercentage)).foregroundStyle(color).fontWeight(.semibold)
+                if let used = context.usedTokens, let size = context.windowSize {
+                    Text(" · \(Format.tokens(used)) / \(Format.tokens(size))")
+                }
+                if context.isHigh { Text(" · compacts soon") }
+            }
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(Theme.textTertiary)
+    }
+}
+
+struct Chip: View {
+    let text: String
+    var color: Color = Theme.textSecondary
+    var background: Color = Theme.chip
+
+    var body: some View {
+        Text(text)
+            .font(Theme.mono)
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(background, in: RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+struct SectionLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .semibold))
+            .tracking(0.6)
+            .foregroundStyle(Theme.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+    }
+}
