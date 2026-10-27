@@ -11,7 +11,7 @@ Thanks for helping. A few ground rules keep CC Pulse trustworthy enough to run o
 
 ```sh
 swift build && swift test
-./tests/scripts/test_scripts.sh
+./scripts/test-scripts.sh
 swift run CCPulse
 ```
 

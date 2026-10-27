@@ -20,6 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Syntax check
-        run: for f in hooks/*.sh scripts/*.sh tests/scripts/*.sh; do zsh -n "$f"; done
+        run: for f in hooks/*.sh scripts/*.sh; do zsh -n "$f"; done
       - name: Script tests
-        run: ./tests/scripts/test_scripts.sh
+        run: ./scripts/test-scripts.sh

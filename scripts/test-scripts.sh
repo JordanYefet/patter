@@ -4,7 +4,7 @@
 
 set -uo pipefail
 
-repo="${0:A:h:h:h}"
+repo="${0:A:h:h}"
 failures=0
 
 pass() { print "  ok   $1" }

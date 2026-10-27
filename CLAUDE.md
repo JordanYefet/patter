@@ -5,7 +5,7 @@ macOS menu bar / HUD / notch app that shows Claude Code session status, fed by a
 ## Commands
 
 - `swift build` / `swift test`: build everything, test `PulseCore`
-- `./tests/scripts/test_scripts.sh`: installer + hook script tests (zsh, jq)
+- `./scripts/test-scripts.sh`: installer + hook script tests (zsh, jq)
 - `./scripts/bundle.sh --install`: build `CC Pulse.app` and open it
 - `./scripts/install.sh --dry-run`: preview the settings.json change
 
