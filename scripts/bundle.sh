@@ -47,6 +47,11 @@ codesign --force --sign - "$app"
 print "Built: $app"
 
 if [[ "${1:-}" == "--install" ]]; then
+  # `open` only activates an already-running copy, so quit it first or the
+  # old binary keeps running.
+  if pkill -x CCPulse; then
+    while pgrep -x CCPulse >/dev/null; do sleep 0.1; done
+  fi
   mkdir -p "$HOME/Applications"
   rm -rf "$HOME/Applications/CC Pulse.app"
   cp -R "$app" "$HOME/Applications/"
