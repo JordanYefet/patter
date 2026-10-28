@@ -37,7 +37,7 @@ final class HUDController {
         hosting.sizingOptions = .preferredContentSize
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 120),
+            contentRect: NSRect(x: 0, y: 0, width: HUDView.width, height: 120),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -55,7 +55,7 @@ final class HUDController {
 
         if !panel.setFrameUsingName("PatterHUD"), let screen = NSScreen.main {
             let visible = screen.visibleFrame
-            panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - 300 - 24, y: visible.maxY - 16))
+            panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - HUDView.width - 24, y: visible.maxY - 16))
         }
         panel.setFrameAutosaveName("PatterHUD")
         // Expanding near a screen edge would grow the card off screen.
@@ -69,6 +69,9 @@ final class HUDController {
 }
 
 struct HUDView: View {
+    /// Wide enough for a one-line session row: name, Claude's word, time, context.
+    static let width: CGFloat = 360
+
     @EnvironmentObject private var model: AppModel
     @AppStorage("hudCollapsed") private var collapsed = false
 
@@ -91,7 +94,7 @@ struct HUDView: View {
 
     private var title: some View {
         HStack(spacing: 8) {
-            Text("Claude Code").font(.system(size: 12, weight: .bold))
+            Text("Patter").font(.system(size: 12, weight: .bold))
             Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
                 .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
         }
@@ -120,7 +123,7 @@ struct HUDView: View {
             }
         }
         .padding(8)
-        .frame(width: 300)
+        .frame(width: Self.width)
         .background(WindowDragArea())
         .panelSurface(RoundedRectangle(cornerRadius: 14))
     }
@@ -154,7 +157,7 @@ struct HUDView: View {
         .overlay(WindowDragArea { setCollapsed(false) }.clipShape(Capsule()))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("Expand Claude Code status")
+        .accessibilityLabel("Expand Patter")
         .accessibilityAction { setCollapsed(false) }
     }
 

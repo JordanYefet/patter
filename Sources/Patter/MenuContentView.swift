@@ -67,8 +67,8 @@ struct MenuContentView: View {
 
     private var header: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Claude Code").font(.system(size: 13, weight: .bold))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Patter").font(.system(size: 13, weight: .bold))
                 Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
             }
             Spacer()

@@ -87,26 +87,26 @@ private struct MiniLimit: View {
     @ThemePalette private var palette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(label).foregroundStyle(palette.textTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                .lineLimit(1)
                 Spacer(minLength: 4)
                 Text(Format.percent(window.usedPercentage))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(window.isHigh ? palette.attentionText : palette.text)
-                    .fontWeight(.semibold)
                     .monospacedDigit()
                     .layoutPriority(1)
             }
-            .font(.system(size: 10))
-            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? palette.attention : palette.accent, height: 3)
+            .font(.system(size: 12))
+            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? palette.attention : palette.accent, height: 4)
         }
         .frame(maxWidth: .infinity)
     }
 
+    /// "5h · 2h 14m": the window and the time until it resets.
     private var label: String {
         guard let resets = Format.resets(window.resetsAt, now: now) else { return title }
-        return "\(title) · \(resets.replacingOccurrences(of: "Resets in ", with: "resets "))"
+        return "\(title) · \(resets.replacingOccurrences(of: "Resets in ", with: ""))"
     }
 }

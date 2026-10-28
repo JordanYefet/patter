@@ -18,7 +18,7 @@ struct SessionRow: View {
                 content(now: context.date)
             }
             .padding(.horizontal, style == .full ? 12 : 10)
-            .padding(.vertical, style == .full ? 10 : 8)
+            .padding(.vertical, style == .full ? 9 : 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .modifier(RowSurface(
                 shape: RoundedRectangle(cornerRadius: style == .full ? 10 : 12, style: .continuous),
@@ -29,35 +29,36 @@ struct SessionRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("Bring \(session.terminal ?? "the terminal") to the front")
+        .help(help)
     }
 
-    /// Two lines at most: name and status on top, one line of detail below.
-    @ViewBuilder
+    /// One line: name, then what it's up to, then time and context on the
+    /// right. When space runs out the detail gives way first.
     private func content(now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                PhaseIndicator(phase: session.phase)
-                Text(session.projectName)
-                    .font(.system(size: style == .full ? 13 : 12, weight: .semibold))
-                    .foregroundStyle(session.phase == .idle ? palette.textSecondary : palette.text)
-                    .lineLimit(1)
-                if style == .full, let branch = session.branch {
-                    Chip(text: branch)
-                }
-                Spacer(minLength: 8)
-                trailing(now: now)
-                    .font(.system(size: style == .full ? 12 : 11))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .layoutPriority(1)
-            }
-
+        HStack(spacing: 8) {
+            PhaseIndicator(phase: session.phase)
+            Text(session.projectName)
+                .font(.system(size: style == .full ? 13 : 12, weight: .semibold))
+                .foregroundStyle(session.phase == .idle ? palette.textSecondary : palette.text)
+                .lineLimit(1)
+                .layoutPriority(2)
             detail
                 .font(.system(size: style == .full ? 12 : 11))
                 .lineLimit(1)
-                .padding(.leading, PhaseIndicator.width + 8)
+            Spacer(minLength: 6)
+            trailing(now: now)
+                .font(.system(size: style == .full ? 12 : 11))
+                .monospacedDigit()
+                .lineLimit(1)
+                .layoutPriority(1)
         }
+    }
+
+    /// The branch has no room in the row, so it lives in the tooltip.
+    private var help: String {
+        let open = "Click to bring \(session.terminal ?? "the terminal") to the front"
+        guard let branch = session.branch else { return open }
+        return "\(session.projectName) on \(branch)\n\(open)"
     }
 
     @ViewBuilder

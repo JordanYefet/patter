@@ -44,13 +44,17 @@ struct SettingsView: View {
                         .resizable()
                         .frame(width: 44, height: 44)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Patter").font(.headline)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("Patter").font(.headline)
+                            if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+                                Text(version).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                         Text("Created by Jordan Yefet Berman").foregroundStyle(.secondary)
+                        Link("github.com/JordanYefet/patter", destination: URL(string: "https://github.com/JordanYefet/patter")!)
+                            .font(.callout)
                     }
                     Spacer()
-                    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-                        Text("Version \(version)").font(.caption).foregroundStyle(.secondary)
-                    }
                 }
             }
             Section("Show") {
@@ -98,7 +102,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         // A grouped Form scrolls, so the window would open at a default height
         // and hide the last sections: size it to fit them.
-        .frame(width: 440, height: 700)
+        .frame(width: 440, height: 760)
         .padding(.vertical, 8)
     }
 }

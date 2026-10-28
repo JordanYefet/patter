@@ -11,7 +11,7 @@ Created by **Jordan Yefet Berman**.
 <p align="center">
   <img src="docs/images/menu.png" width="392" alt="The Patter menu: 5-hour and weekly usage, then sessions grouped into Needs you, Working and Recent">
   &nbsp;
-  <img src="docs/images/hud.png" width="300" alt="The floating HUD with the same sessions in a compact card">
+  <img src="docs/images/hud.png" width="360" alt="The floating HUD with the same sessions in a compact card">
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@ Created by **Jordan Yefet Berman**.
 
 | Placement | Best for |
 | --- | --- |
-| **Menu bar** (always on) | The full picture: each session's project, branch, current action, task progress, context window, plus account usage at the top. The icon is Clawd, the Claude Code mascot: it walks while anything is working, stands still when done, gets a yellow badge with a count when sessions need you, and turns grey with a red "!" and a countdown when you've hit your 5-hour or weekly limit. |
+| **Menu bar** (always on) | The full picture: one line per session with its project, what it's up to, task progress and context window (hover for the branch), plus account usage at the top. The icon is Clawd, the Claude Code mascot: it walks while anything is working, stands still when done, gets a yellow badge with a count when sessions need you, and turns grey with a red "!" and a countdown when you've hit your 5-hour or weekly limit. |
 | **Floating HUD** | A big single monitor. Always on top, never steals focus, drag it anywhere, collapse it to a pill (click anywhere on the pill to expand it again). |
 | **Notch** | Notched MacBooks. "Ears" grow out of the notch while sessions run, turn orange when one needs you, and the full list drops down on hover. |
 
@@ -62,7 +62,7 @@ Appearance (Settings → Appearance):
 ## Install
 
 ```sh
-git clone https://github.com/<you>/patter.git
+git clone https://github.com/JordanYefet/patter.git
 cd patter
 
 # 1. Register the hooks and status line in ~/.claude/settings.json (backed up first)

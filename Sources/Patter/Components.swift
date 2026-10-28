@@ -63,20 +63,6 @@ struct Meter: View {
 /// A small text tag (the branch on a session row). Always a flat fill, even
 /// in the glass theme: it sits inside rows that can be glass themselves, and
 /// glass nested in glass melts into it.
-struct Chip: View {
-    let text: String
-    @ThemePalette private var palette
-
-    var body: some View {
-        Text(text)
-            .font(Theme.mono)
-            .foregroundStyle(palette.textSecondary)
-            .lineLimit(1)
-            .padding(.horizontal, palette.glass ? 7 : 6)
-            .padding(.vertical, 1)
-            .background(palette.chip, in: palette.glass ? AnyShape(Capsule()) : AnyShape(RoundedRectangle(cornerRadius: 4)))
-    }
-}
 
 struct SectionLabel: View {
     let text: String
