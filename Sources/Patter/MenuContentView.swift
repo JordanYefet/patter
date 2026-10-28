@@ -4,6 +4,7 @@ import PatterCore
 /// The dropdown under the menu bar icon.
 struct MenuContentView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openSettings) private var openSettings
 
     private var needsYou: [Session] { model.sessions.filter { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
@@ -25,13 +26,18 @@ struct MenuContentView: View {
                 section("Recent", idle)
             }
 
-            Divider().overlay(Theme.border).padding(.vertical, 6).padding(.horizontal, 8)
+            Divider().overlay(Theme.palette.separator).padding(.vertical, 6).padding(.horizontal, 8)
 
             Toggle("Floating HUD", isOn: $model.showHUD).toggleStyle(MenuToggleStyle())
             if NotchController.hasNotch {
                 Toggle("Show in notch", isOn: $model.showNotch).toggleStyle(MenuToggleStyle())
             }
-            SettingsLink {
+            Button {
+                // Patter is a menu-bar-only app that's never active on its own,
+                // so the Settings window would open but stay hidden. Activate first.
+                NSApp.activate()
+                openSettings()
+            } label: {
                 MenuItemLabel(title: "Settings…", shortcut: "⌘,")
             }
             .buttonStyle(.plain)
@@ -44,9 +50,19 @@ struct MenuContentView: View {
         }
         .padding(6)
         .frame(width: 392)
-        .background(Theme.panel)
+        .background { menuBackground }
         .foregroundStyle(Theme.text)
-        .environment(\.colorScheme, .dark)
+        .themeColorScheme()
+        // Theme is a static the views below don't observe: rebuild on change.
+        .id(model.theme)
+    }
+
+    /// Solid themes paint over the window's own material. Glass leaves it
+    /// alone: on macOS 26 the system already puts the menu on glass, and a
+    /// second pane of glass (or a fill) on top would just look frosted.
+    @ViewBuilder
+    private var menuBackground: some View {
+        if !Theme.isGlass { Theme.panel }
     }
 
     private var header: some View {
@@ -61,7 +77,7 @@ struct MenuContentView: View {
             } label: {
                 Image(systemName: model.notificationsMuted ? "bell.slash" : "bell")
                     .frame(width: 32, height: 32)
-                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 8))
+                    .chipSurface(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .foregroundStyle(Theme.textSecondary)
@@ -116,7 +132,21 @@ private struct MenuItemLabel: View {
         .font(.system(size: 13))
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .contentShape(Rectangle())
+        .modifier(MenuItemHighlight())
+    }
+}
+
+/// The hover highlight on a menu item.
+private struct MenuItemHighlight: ViewModifier {
+    @State private var hovering = false
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 8, style: .continuous) }
+
+    func body(content: Content) -> some View {
+        content
+            .background(hovering ? Theme.card : .clear, in: shape)
+            .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 }
 
@@ -127,13 +157,13 @@ private struct MenuToggleStyle: ToggleStyle {
                 configuration.label
                 Spacer()
                 if configuration.isOn {
-                    Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.cyanText)
+                    Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.accentText)
                 }
             }
             .font(.system(size: 13))
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .contentShape(Rectangle())
+            .modifier(MenuItemHighlight())
         }
         .buttonStyle(.plain)
     }

@@ -8,14 +8,22 @@ import PatterCore
 final class HUDController {
     private weak var model: AppModel?
     private var panel: NSPanel?
+    private var observers: [NSObjectProtocol] = []
 
     init(model: AppModel) {
         self.model = model
+        // A display can disappear from under the HUD; bring it back.
+        observers.append(NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.panel?.keepOnScreen() }
+        })
     }
 
     func setVisible(_ visible: Bool) {
         if visible {
             makePanelIfNeeded()
+            panel?.keepOnScreen()
             panel?.orderFrontRegardless()
         } else {
             panel?.orderOut(nil)
@@ -50,6 +58,12 @@ final class HUDController {
             panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - 300 - 24, y: visible.maxY - 16))
         }
         panel.setFrameAutosaveName("PatterHUD")
+        // Expanding near a screen edge would grow the card off screen.
+        observers.append(NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification, object: panel, queue: .main
+        ) { [weak panel] _ in
+            MainActor.assumeIsolated { panel?.keepOnScreen() }
+        })
         self.panel = panel
     }
 }
@@ -58,23 +72,37 @@ struct HUDView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("hudCollapsed") private var collapsed = false
 
+    /// Every theme has the same structure; Liquid Glass only changes the
+    /// material behind the card and the pill.
     var body: some View {
         Group {
             if collapsed { pill } else { card }
         }
-        .environment(\.colorScheme, .dark)
+        .themeColorScheme()
         .foregroundStyle(Theme.text)
         .fixedSize()
+        // Theme is a static the views below don't observe: rebuild on change.
+        .id(model.theme)
+    }
+
+    private func setCollapsed(_ value: Bool) {
+        collapsed = value
+    }
+
+    private var title: some View {
+        HStack(spacing: 8) {
+            Text("Claude Code").font(.system(size: 12, weight: .bold))
+            Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
+                .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+        }
     }
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text("Claude Code").font(.system(size: 12, weight: .bold))
-                Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
-                    .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                title
                 Spacer()
-                iconButton("chevron.up", label: "Collapse") { collapsed = true }
+                iconButton("chevron.up", label: "Collapse") { setCollapsed(true) }
             }
             .padding(.leading, 8)
             .padding(.trailing, 2)
@@ -94,8 +122,7 @@ struct HUDView: View {
         .padding(8)
         .frame(width: 300)
         .background(WindowDragArea())
-        .background(Theme.panel.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+        .panelSurface(RoundedRectangle(cornerRadius: 14))
     }
 
     private var pill: some View {
@@ -107,7 +134,7 @@ struct HUDView: View {
                 }
             }
             if model.summary.working > 0, let first = firstBlocked {
-                Rectangle().fill(Theme.border).frame(width: 1, height: 14)
+                Rectangle().fill(Theme.palette.separator).frame(width: 1, height: 14)
                 blocked(first)
             } else if let first = firstBlocked {
                 blocked(first)
@@ -120,15 +147,15 @@ struct HUDView: View {
         .padding(.leading, 10)
         .padding(.trailing, 14)
         .frame(minHeight: 44)
-        // Drag to move, click to expand. A Button would swallow the drag.
-        .background(WindowDragArea { collapsed = false })
-        .background(Theme.panel.opacity(0.94), in: Capsule())
-        .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
-        .contentShape(Capsule())
+        .panelSurface(Capsule())
+        // Drag to move, click to expand, anywhere on the pill: on top, since
+        // the text and Clawd would otherwise take the click. The pill has no
+        // buttons of its own. (A Button would swallow the drag.)
+        .overlay(WindowDragArea { setCollapsed(false) }.clipShape(Capsule()))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Expand Claude Code status")
-        .accessibilityAction { collapsed = false }
+        .accessibilityAction { setCollapsed(false) }
     }
 
     /// For the collapsed pill. Walks while any session works; grey with no sessions.
@@ -144,16 +171,17 @@ struct HUDView: View {
     private func blocked(_ s: Session) -> some View {
         HStack(spacing: 6) {
             AttentionDot()
-            Text(s.projectName).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.orangeText)
+            Text(s.projectName).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.attentionText)
         }
     }
 
+    /// A rounded square chip.
     private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .semibold))
                 .frame(width: 28, height: 28)
-                .background(Theme.chip, in: RoundedRectangle(cornerRadius: 7))
+                .chipSurface(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
         .foregroundStyle(Theme.textSecondary)
@@ -197,8 +225,17 @@ struct WindowDragArea: NSViewRepresentable {
         }
 
         override func mouseUp(with event: NSEvent) {
-            if !moved { onClick?() }
+            if moved { window?.keepOnScreen() } else { onClick?() }
             start = nil
         }
+    }
+}
+
+extension NSWindow {
+    /// Pulls the window fully inside a screen's usable area (clear of the
+    /// menu bar and Dock), so it can't get stranded off screen.
+    func keepOnScreen() {
+        let fixed = Geometry.keepInside(frame, screens: NSScreen.screens.map(\.visibleFrame))
+        if fixed.origin != frame.origin { setFrameOrigin(fixed.origin) }
     }
 }

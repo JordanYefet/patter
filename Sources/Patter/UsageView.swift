@@ -8,6 +8,7 @@ struct UsageView: View {
 
     let usage: UsageLimits?
     var style: Style = .card
+    @ThemePalette private var palette
 
     var body: some View {
         if let usage, usage.fiveHour != nil || usage.sevenDay != nil {
@@ -22,7 +23,7 @@ struct UsageView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+                    .modifier(CardSurface(shape: RoundedRectangle(cornerRadius: 12, style: .continuous)))
                 case .compact:
                     // Top-aligned with one-line labels, so both meters sit at the same height.
                     HStack(alignment: .top, spacing: 10) {
@@ -40,7 +41,17 @@ struct UsageView: View {
 extension UsageView {
     /// Separates the 5-hour and weekly windows so they don't read as one bar.
     private var divider: some View {
-        Rectangle().fill(Theme.border).frame(width: 1).frame(maxHeight: .infinity)
+        Rectangle().fill(palette.separator).frame(width: 1).frame(maxHeight: .infinity)
+    }
+}
+
+/// The card behind the limits in the menu.
+private struct CardSurface<S: Shape>: ViewModifier {
+    let shape: S
+    @ThemePalette private var palette
+
+    func body(content: Content) -> some View {
+        content.background(palette.card, in: shape)
     }
 }
 
@@ -48,20 +59,21 @@ private struct LimitBar: View {
     let title: String
     let window: LimitWindow
     let now: Date
+    @ThemePalette private var palette
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                Text(title).font(.system(size: 11)).foregroundStyle(palette.textTertiary)
                 Spacer()
                 Text(Format.percent(window.usedPercentage))
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(window.isHigh ? Theme.orangeText : Theme.text)
+                    .foregroundStyle(window.isHigh ? palette.attentionText : palette.text)
                     .monospacedDigit()
             }
-            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? Theme.orange : Theme.cyan, height: 5)
+            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? palette.attention : palette.accent, height: 5)
             if let resets = Format.resets(window.resetsAt, now: now) {
-                Text(resets).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                Text(resets).font(.system(size: 11)).foregroundStyle(palette.textTertiary)
             }
         }
         .frame(maxWidth: .infinity)
@@ -72,22 +84,23 @@ private struct MiniLimit: View {
     let title: String
     let window: LimitWindow
     let now: Date
+    @ThemePalette private var palette
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(label).foregroundStyle(Theme.textTertiary)
+                Text(label).foregroundStyle(palette.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 4)
                 Text(Format.percent(window.usedPercentage))
-                    .foregroundStyle(window.isHigh ? Theme.orangeText : Theme.text)
+                    .foregroundStyle(window.isHigh ? palette.attentionText : palette.text)
                     .fontWeight(.semibold)
                     .monospacedDigit()
                     .layoutPriority(1)
             }
             .font(.system(size: 10))
-            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? Theme.orange : Theme.cyan, height: 3)
+            Meter(fraction: window.usedPercentage / 100, color: window.isHigh ? palette.attention : palette.accent, height: 3)
         }
         .frame(maxWidth: .infinity)
     }

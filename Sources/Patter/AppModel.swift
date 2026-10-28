@@ -17,6 +17,15 @@ final class AppModel: ObservableObject {
     @Published var notifyNeedsInput: Bool { didSet { defaults.set(notifyNeedsInput, forKey: Keys.notifyNeedsInput) } }
     @Published var notifyFinished: Bool { didSet { defaults.set(notifyFinished, forKey: Keys.notifyFinished) } }
     @Published var notificationsMuted = false
+    @Published var theme: ThemeChoice {
+        didSet {
+            defaults.set(theme.rawValue, forKey: Keys.theme)
+            Theme.palette = theme.palette
+        }
+    }
+    /// Clawd walks in the menu bar while a session works.
+    @Published var menuBarAnimation: Bool { didSet { defaults.set(menuBarAnimation, forKey: Keys.menuBarAnimation) } }
+    @Published var menuBarIconStyle: MenuBarIconStyle { didSet { defaults.set(menuBarIconStyle.rawValue, forKey: Keys.menuBarIconStyle) } }
     @Published var notifyAfterSeconds: Double {
         didSet {
             defaults.set(notifyAfterSeconds, forKey: Keys.notifyAfter)
@@ -40,6 +49,11 @@ final class AppModel: ObservableObject {
         static let showHUD = "showHUD"
         static let showNotch = "showNotch"
         static let notifyNeedsInput = "notifyNeedsInput"
+        static let theme = "theme"
+        static let menuBarAnimation = "menuBarAnimation"
+        static let menuBarIconStyle = "menuBarIconStyle"
+        /// The on/off Liquid Glass switch that came before themes.
+        static let legacyLiquidGlass = "liquidGlass"
         static let notifyFinished = "notifyFinished"
         static let notifyAfter = "notifyAfterSeconds"
         static let migratedFromCCPulse = "migratedFromCCPulse"
@@ -69,10 +83,18 @@ final class AppModel: ObservableObject {
             Keys.notifyNeedsInput: true,
             Keys.notifyFinished: true,
             Keys.notifyAfter: 30.0,
+            Keys.menuBarAnimation: true,
         ])
         showHUD = d.bool(forKey: Keys.showHUD)
         showNotch = d.bool(forKey: Keys.showNotch)
         notifyNeedsInput = d.bool(forKey: Keys.notifyNeedsInput)
+        var theme = d.string(forKey: Keys.theme).flatMap(ThemeChoice.init(rawValue:))
+            ?? (d.bool(forKey: Keys.legacyLiquidGlass) ? .liquidGlass : .patter)
+        if !theme.isAvailable { theme = .patter }
+        self.theme = theme
+        Theme.palette = theme.palette
+        menuBarAnimation = d.bool(forKey: Keys.menuBarAnimation)
+        menuBarIconStyle = d.string(forKey: Keys.menuBarIconStyle).flatMap(MenuBarIconStyle.init(rawValue:)) ?? .color
         notifyFinished = d.bool(forKey: Keys.notifyFinished)
         notifyAfterSeconds = d.double(forKey: Keys.notifyAfter)
         store.notifyFinishedAfter = notifyAfterSeconds

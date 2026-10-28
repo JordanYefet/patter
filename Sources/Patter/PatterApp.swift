@@ -44,6 +44,16 @@ struct SettingsView: View {
                     .disabled(!NotchController.hasNotch)
                     .help(NotchController.hasNotch ? "" : "This Mac's display has no notch")
             }
+            Section("Appearance") {
+                Picker("Theme", selection: $model.theme) {
+                    ForEach(ThemeChoice.allCases.filter(\.isAvailable)) { Text($0.title).tag($0) }
+                }
+                Picker("Menu bar icon", selection: $model.menuBarIconStyle) {
+                    ForEach(MenuBarIconStyle.allCases) { Text($0.title).tag($0) }
+                }
+                Toggle("Animate the menu bar icon", isOn: $model.menuBarAnimation)
+                    .help("Clawd walks in the menu bar while a session works")
+            }
             Section("Notifications") {
                 Toggle("When a session needs you", isOn: $model.notifyNeedsInput)
                 Toggle("When a session finishes", isOn: $model.notifyFinished)

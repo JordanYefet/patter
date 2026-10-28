@@ -9,6 +9,9 @@ struct SessionRow: View {
     var style: Style = .full
     var onOpen: (Session) -> Void = { _ in }
 
+    @ThemePalette private var palette
+    @State private var hovering = false
+
     var body: some View {
         Button { onOpen(session) } label: {
             TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -17,15 +20,16 @@ struct SessionRow: View {
             .padding(.horizontal, style == .full ? 12 : 10)
             .padding(.vertical, style == .full ? 10 : 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(background, in: RoundedRectangle(cornerRadius: style == .full ? 8 : 10))
+            .modifier(RowSurface(
+                shape: RoundedRectangle(cornerRadius: style == .full ? 10 : 12, style: .continuous),
+                needsYou: session.phase == .needsInput,
+                hovering: hovering
+            ))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
         .help("Bring \(session.terminal ?? "the terminal") to the front")
-    }
-
-    private var background: Color {
-        session.phase == .needsInput ? Theme.orange.opacity(0.13) : Color.white.opacity(0.0001)
     }
 
     /// Two lines at most: name and status on top, one line of detail below.
@@ -36,7 +40,7 @@ struct SessionRow: View {
                 PhaseIndicator(phase: session.phase)
                 Text(session.projectName)
                     .font(.system(size: style == .full ? 13 : 12, weight: .semibold))
-                    .foregroundStyle(session.phase == .idle ? Theme.textSecondary : Theme.text)
+                    .foregroundStyle(session.phase == .idle ? palette.textSecondary : palette.text)
                     .lineLimit(1)
                 if style == .full, let branch = session.branch {
                     Chip(text: branch)
@@ -60,19 +64,19 @@ struct SessionRow: View {
     private var detail: some View {
         switch session.phase {
         case .needsInput:
-            let title = Text(session.attention ?? "Needs your input").foregroundStyle(Theme.orangeText)
+            let title = Text(session.attention ?? "Needs your input").foregroundStyle(palette.attentionText)
             if let detail = session.attentionDetail {
-                title + Text("  ") + Text(detail).font(Theme.mono).foregroundStyle(Theme.text)
+                title + Text("  ") + Text(detail).font(Theme.mono).foregroundStyle(palette.text)
             } else {
                 title
             }
 
         case .working:
-            Text(workingDetail).foregroundStyle(Theme.textSecondary)
+            Text(workingDetail).foregroundStyle(palette.textSecondary)
 
         case .idle:
             if let last = session.lastTurnDuration {
-                Text("Done in \(Format.duration(last))").foregroundStyle(Theme.textTertiary)
+                Text("Done in \(Format.duration(last))").foregroundStyle(palette.textTertiary)
             }
         }
     }
@@ -99,10 +103,29 @@ struct SessionRow: View {
         case .idle:
             time = "\(Format.shortDuration(since)) ago"
         }
-        let base = Text(time).foregroundStyle(session.phase == .needsInput ? Theme.orangeText : Theme.textTertiary)
+        let base = Text(time).foregroundStyle(session.phase == .needsInput ? palette.attentionText : palette.textTertiary)
         guard let ctx = session.context else { return base }
         return base
-            + Text(" · ").foregroundStyle(Theme.textTertiary)
-            + Text("ctx \(Format.percent(ctx.usedPercentage))").foregroundStyle(ctx.isHigh ? Theme.orangeText : Theme.textTertiary)
+            + Text(" · ").foregroundStyle(palette.textTertiary)
+            + Text("ctx \(Format.percent(ctx.usedPercentage))").foregroundStyle(ctx.isHigh ? palette.attentionText : palette.textTertiary)
+    }
+}
+
+/// A row's background: an orange wash when it needs you and a faint
+/// highlight on hover. Flat in every theme; in Liquid Glass the glass is the
+/// panel behind the rows, never the rows themselves.
+private struct RowSurface<S: Shape>: ViewModifier {
+    let shape: S
+    let needsYou: Bool
+    let hovering: Bool
+    @ThemePalette private var palette
+
+    func body(content: Content) -> some View {
+        content.background(fill, in: shape)
+    }
+
+    private var fill: Color {
+        if needsYou { return palette.attention.opacity(hovering ? 0.18 : 0.13) }
+        return hovering ? palette.card : .clear
     }
 }

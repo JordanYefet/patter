@@ -110,6 +110,7 @@ struct NotchView: View {
 
     private var blocked: Session? { model.sessions.first { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
+    private var palette: Palette { .notch }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -119,11 +120,12 @@ struct NotchView: View {
                 ears
             }
         }
+        // Black in every theme, to match the hardware notch it extends.
         .background(Color.black, in: UnevenRoundedRectangle(bottomLeadingRadius: expanded ? 24 : 12, bottomTrailingRadius: expanded ? 24 : 12))
         .overlay(alignment: .top) {
             if blocked != nil && !expanded {
                 UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
-                    .stroke(Theme.orange.opacity(0.4), lineWidth: 1.5)
+                    .stroke(palette.attention.opacity(0.4), lineWidth: 1.5)
             }
         }
         .fixedSize()
@@ -131,7 +133,9 @@ struct NotchView: View {
             withAnimation(.spring(duration: 0.28)) { expanded = hovering && !model.sessions.isEmpty }
         }
         .environment(\.colorScheme, .dark)
-        .foregroundStyle(Theme.text)
+        .environment(\.paletteOverride, palette)
+        .foregroundStyle(palette.text)
+        .id(model.theme)
     }
 
     /// Collapsed: content to the left and right of the camera housing.
@@ -141,10 +145,10 @@ struct NotchView: View {
             HStack(spacing: notch.width) {
                 HStack(spacing: 8) {
                     AttentionDot()
-                    Text(blocked.projectName).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.orangeText).lineLimit(1)
+                    Text(blocked.projectName).font(.system(size: 12, weight: .semibold)).foregroundStyle(palette.attentionText).lineLimit(1)
                 }
                 .frame(width: 120, alignment: .leading)
-                Text(shortAttention(blocked)).font(.system(size: 12)).foregroundStyle(Theme.orangeText).lineLimit(1)
+                Text(shortAttention(blocked)).font(.system(size: 12)).foregroundStyle(palette.attentionText).lineLimit(1)
                     .frame(width: 120, alignment: .trailing)
             }
             .padding(.horizontal, 14)
@@ -153,10 +157,10 @@ struct NotchView: View {
             HStack(spacing: notch.width) {
                 HStack(spacing: 6) {
                     ClawdView(walking: true)
-                    Text("\(working.count)").font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                    Text("\(working.count)").font(.system(size: 12)).foregroundStyle(palette.textSecondary)
                 }
                 .frame(width: 40, alignment: .leading)
-                Text(aggregateTasks).font(.system(size: 12)).foregroundStyle(Theme.cyanText).monospacedDigit()
+                Text(aggregateTasks).font(.system(size: 12)).foregroundStyle(palette.accentText).monospacedDigit()
                     .frame(width: 40, alignment: .trailing)
             }
             .padding(.horizontal, 12)
@@ -191,5 +195,18 @@ struct NotchView: View {
     private func shortAttention(_ s: Session) -> String {
         guard let a = s.attention else { return "Needs you" }
         return a.hasPrefix("Allow ") ? "\(a)?" : ActivityDescriber.truncate(a, 18)
+    }
+}
+
+extension Palette {
+    /// The notch is black like the hardware it wraps, in every theme, so it
+    /// always uses dark colors: dark themes keep theirs, a light theme (Paper)
+    /// borrows Patter's, and glass stays flat (no glass beside a black notch;
+    /// its semantic colors resolve light under the forced dark appearance).
+    static var notch: Palette {
+        var palette = Theme.palette.colorScheme == .light ? Palette.patter : Theme.palette
+        palette.glass = false
+        palette.colorScheme = .dark
+        return palette
     }
 }

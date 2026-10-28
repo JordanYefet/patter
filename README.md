@@ -26,6 +26,12 @@ Account-wide: **5-hour window** and **weekly** usage with reset times. These are
 
 Notifications: when a session needs you, and when a turn longer than 30s (configurable) finishes. Clicking a session brings its terminal app to the front.
 
+Appearance (Settings → Appearance):
+
+- **Theme**: Patter (the default dark teal), Liquid Glass (macOS 26+), Claude, Graphite and Paper (light).
+- **Menu bar icon**: orange Clawd, or monochrome to match your other menu bar icons. In monochrome, an idle Clawd is drawn as an outline, so working and idle stay easy to tell apart.
+- **Animation**: Clawd's walk in the menu bar can be turned off. An idle Clawd is then drawn as an outline too.
+
 ## Requirements
 
 - macOS 14 Sonoma or later

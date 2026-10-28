@@ -25,8 +25,9 @@ enum MenuBarState: Equatable {
     }
 }
 
-/// The MenuBarExtra label. Clawd walks while a session works; a slow tick
-/// keeps the countdown fresh and clears the limit state once it resets.
+/// The MenuBarExtra label. Clawd walks while a session works (unless the
+/// animation is off or Reduce Motion is on); a slow tick keeps the countdown
+/// fresh and clears the limit state once it resets.
 struct MenuBarLabel: View {
     @ObservedObject var model: AppModel
     @StateObject private var clock = MenuBarClock()
@@ -35,16 +36,19 @@ struct MenuBarLabel: View {
         MenuBarState(summary: model.summary, usage: model.usage, now: clock.now)
     }
 
+    private var animated: Bool { model.menuBarAnimation && !clock.reduceMotion }
+
     private var mode: MenuBarClock.Mode {
         switch state {
-        case .working: return .walking
+        case .working: return animated ? .walking : .stopped
         case .limited: return .countdown
         default: return .stopped
         }
     }
 
     var body: some View {
-        Image(nsImage: MenuBarIcon.image(for: state, frame: clock.frame, now: clock.now))
+        Image(nsImage: MenuBarIcon.image(
+            for: state, style: model.menuBarIconStyle, animated: animated, frame: clock.frame, now: clock.now))
             .onAppear { clock.run(mode) }
             .onChange(of: mode) { _, mode in clock.run(mode) }
     }
@@ -59,8 +63,22 @@ final class MenuBarClock: ObservableObject {
     /// Walk cycle frame, 0..<4.
     @Published private(set) var frame = 0
     @Published private(set) var now = Date()
+    /// The system Reduce Motion setting, kept live.
+    @Published private(set) var reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     private var timer: Timer?
     private var mode: Mode?
+
+    init() {
+        // The clock lives as long as the menu bar label, i.e. the app, so the
+        // observer is never removed.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            }
+        }
+    }
 
     func run(_ mode: Mode) {
         guard mode != self.mode else { return }
@@ -93,9 +111,14 @@ final class MenuBarClock: ObservableObject {
 /// Draws Clawd, the Claude Code mascot, as the menu bar icon.
 ///
 /// MenuBarExtra renders SF Symbols as template (monochrome) images, which
-/// can't be orange, so this is a non-template NSImage. Grey Clawd and the
-/// countdown use label colors resolved at draw time, so they follow the menu
-/// bar's light/dark appearance.
+/// can't be orange, so this is a non-template NSImage. Monochrome Clawd, grey
+/// Clawd and the countdown use label colors resolved at draw time, so they
+/// follow the menu bar's light/dark appearance. Badges keep their colors in
+/// both styles: they're the signal.
+///
+/// A filled Clawd means working (or needs you). When working and idle can't be
+/// told apart by the walk or the color (monochrome, or the animation off), the
+/// states that aren't busy show an outline instead.
 enum MenuBarIcon {
     private static let height: CGFloat = 18
     private static let cell: CGFloat = 1.15
@@ -104,7 +127,8 @@ enum MenuBarIcon {
     private static let badgeRadius: CGFloat = 4.4
     private static let countdownFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
 
-    static func image(for state: MenuBarState, frame: Int, now: Date) -> NSImage {
+    /// `animated` false: Clawd stands still even while working, and `frame` is ignored.
+    static func image(for state: MenuBarState, style: MenuBarIconStyle, animated: Bool, frame: Int, now: Date) -> NSImage {
         var countdown: NSAttributedString?
         if case .limited(let until) = state {
             countdown = NSAttributedString(string: Format.countdown(until.timeIntervalSince(now)), attributes: [
@@ -120,20 +144,25 @@ enum MenuBarIcon {
         var width = hasBadge ? badgeCenter.x + badgeRadius * 1.65 + 0.5 : clawdWidth
         if let countdown { width += 3 + ceil(countdown.size().width) }
 
+        let outlineIdle = style == .monochrome || !animated
+        let walkFrame: Int? = animated ? frame : nil
+
         // Flipped, so the art below reads top to bottom.
         let image = NSImage(size: NSSize(width: ceil(width), height: height), flipped: true) { _ in
+            // Resolved here, inside the drawing handler, so labelColor follows the menu bar.
+            let ink: NSColor = style == .monochrome ? .labelColor : NSColor(Theme.clawd)
             switch state {
             case .working:
-                drawClawd(color: NSColor(Theme.clawd), frame: frame)
+                drawClawd(color: ink, frame: walkFrame)
             case .idle:
-                drawClawd(color: NSColor(Theme.clawd), frame: nil)
+                drawClawd(color: ink, frame: nil, outline: outlineIdle)
             case .noSessions:
-                drawClawd(color: .tertiaryLabelColor, frame: nil)
+                drawClawd(color: .tertiaryLabelColor, frame: nil, outline: outlineIdle)
             case .needsInput(let count):
-                drawClawd(color: NSColor(Theme.clawd), frame: nil)
+                drawClawd(color: ink, frame: nil)
                 drawBadge(count > 9 ? "9+" : "\(count)", fill: NSColor(Theme.badgeNeedsYou), text: NSColor(Theme.onBadgeNeedsYou))
             case .limited:
-                drawClawd(color: .tertiaryLabelColor, frame: nil)
+                drawClawd(color: .tertiaryLabelColor, frame: nil, outline: outlineIdle)
                 drawBadge("!", fill: NSColor(Theme.badgeLimit), text: NSColor(Theme.onBadgeLimit))
             }
             if let countdown {
@@ -157,12 +186,19 @@ enum MenuBarIcon {
         }
     }
 
-    private static func drawClawd(color: NSColor, frame: Int?) {
+    /// `outline`: just the silhouette, one cell thick (see `Clawd.fillOutline`).
+    private static func drawClawd(color: NSColor, frame: Int?, outline: Bool = false) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let size = Clawd.size(cell: cell)
-        let path = NSBezierPath(cgPath: Clawd.path(cell: cell, frame: frame))
-        path.transform(using: AffineTransform(translationByX: 0, byY: (height - size.height) / 2))
+        var center = CGAffineTransform(translationX: 0, y: (height - size.height) / 2)
+        guard let path = Clawd.path(cell: cell, frame: frame).copy(using: &center) else { return }
         color.setFill()
-        path.fill()
+        if outline {
+            Clawd.fillOutline(path, width: cell, in: ctx)
+        } else {
+            ctx.addPath(path)
+            ctx.fillPath()
+        }
     }
 
     /// Docker-style: a round badge over the bottom-right corner, with a
@@ -187,5 +223,23 @@ enum MenuBarIcon {
         ])
         let size = str.size()
         str.draw(at: NSPoint(x: c.x - size.width / 2, y: c.y - size.height / 2))
+    }
+}
+
+/// Settings → Appearance → Menu bar icon.
+enum MenuBarIconStyle: String, CaseIterable, Identifiable {
+    /// Orange Clawd.
+    case color
+    /// Matches the other menu bar icons (white on a dark menu bar, black on
+    /// a light one).
+    case monochrome
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .color: return "Orange"
+        case .monochrome: return "Monochrome"
+        }
     }
 }

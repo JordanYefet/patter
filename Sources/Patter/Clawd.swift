@@ -62,6 +62,31 @@ enum Clawd {
         }
         return path
     }
+
+    /// Fills `path` as an outline `width` thick along its silhouette (and
+    /// around the eye holes), in the current fill color of `ctx`.
+    ///
+    /// The path is a union of pixel rects, so stroking it would draw the seams
+    /// between them. Instead: fill it, then clear its interior, i.e. the path
+    /// eroded by `width`: the intersection of copies shifted by ±width in x, y
+    /// and diagonally (the diagonals keep inner corners square). One cell
+    /// keeps the 1-cell legs and the strips beside the eyes solid.
+    static func fillOutline(_ path: CGPath, width t: CGFloat, in ctx: CGContext) {
+        ctx.saveGState()
+        ctx.addPath(path)
+        ctx.fillPath()
+        for dx in [-t, 0, t] {
+            for dy in [-t, 0, t] where dx != 0 || dy != 0 {
+                var shift = CGAffineTransform(translationX: dx, y: dy)
+                guard let shifted = path.copy(using: &shift) else { continue }
+                ctx.addPath(shifted)
+                ctx.clip()
+            }
+        }
+        ctx.setBlendMode(.clear)
+        ctx.fill(path.boundingBoxOfPath)
+        ctx.restoreGState()
+    }
 }
 
 /// Clawd in SwiftUI: walks while `walking`, otherwise stands still.
