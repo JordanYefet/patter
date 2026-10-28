@@ -18,13 +18,18 @@ struct MenuContentView: View {
                 .padding(.horizontal, 6)
                 .padding(.bottom, 4)
 
-            if model.sessions.isEmpty {
-                emptyState
-            } else {
-                section("Needs you", needsYou)
-                section("Working", working)
-                section("Recent", idle)
+            // A real container, not a Group: a Group hands the animation to
+            // each child, so rows coming and going wouldn't animate.
+            VStack(alignment: .leading, spacing: 2) {
+                if model.sessions.isEmpty {
+                    emptyState
+                } else {
+                    section("Needs you", needsYou)
+                    section("Working", working)
+                    section("Recent", idle)
+                }
             }
+            .animatesSessions(model.sessions)
 
             Divider().overlay(Theme.palette.separator).padding(.vertical, 6).padding(.horizontal, 8)
 
@@ -66,12 +71,13 @@ struct MenuContentView: View {
     }
 
     private var header: some View {
-        HStack {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Patter").font(.system(size: 13, weight: .bold))
-                Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
-            }
+        HStack(spacing: 8) {
+            // The icon has transparent padding around its square, so it's
+            // drawn a bit larger than the 13pt title to look the same weight.
+            PatterLogo(size: 20)
+            Text("Patter").font(.system(size: 13, weight: .bold))
             Spacer()
+            Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
             Button {
                 model.notificationsMuted.toggle()
             } label: {
@@ -114,6 +120,7 @@ struct MenuContentView: View {
             SectionLabel(text: title)
             ForEach(items) { session in
                 SessionRow(session: session, style: .full) { model.open($0) }
+                    .transition(.sessionRow)
             }
         }
     }
@@ -168,3 +175,4 @@ private struct MenuToggleStyle: ToggleStyle {
         .buttonStyle(.plain)
     }
 }
+

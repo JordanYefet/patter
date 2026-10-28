@@ -8,6 +8,8 @@ struct UsageView: View {
 
     let usage: UsageLimits?
     var style: Style = .card
+    /// Compact only: the HUD drops the reset times when it's narrow.
+    var showsResets = true
     @ThemePalette private var palette
 
     var body: some View {
@@ -27,9 +29,9 @@ struct UsageView: View {
                 case .compact:
                     // Top-aligned with one-line labels, so both meters sit at the same height.
                     HStack(alignment: .top, spacing: 10) {
-                        if let w = usage.fiveHour { MiniLimit(title: "5h", window: w, now: context.date) }
+                        if let w = usage.fiveHour { MiniLimit(title: "5h", window: w, now: context.date, showsResets: showsResets) }
                         if usage.fiveHour != nil && usage.sevenDay != nil { divider }
-                        if let w = usage.sevenDay { MiniLimit(title: "Week", window: w, now: context.date) }
+                        if let w = usage.sevenDay { MiniLimit(title: "Week", window: w, now: context.date, showsResets: showsResets) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -84,6 +86,7 @@ private struct MiniLimit: View {
     let title: String
     let window: LimitWindow
     let now: Date
+    let showsResets: Bool
     @ThemePalette private var palette
 
     var body: some View {
@@ -106,7 +109,7 @@ private struct MiniLimit: View {
 
     /// "5h · 2h 14m": the window and the time until it resets.
     private var label: String {
-        guard let resets = Format.resets(window.resetsAt, now: now) else { return title }
+        guard showsResets, let resets = Format.resets(window.resetsAt, now: now) else { return title }
         return "\(title) · \(resets.replacingOccurrences(of: "Resets in ", with: ""))"
     }
 }

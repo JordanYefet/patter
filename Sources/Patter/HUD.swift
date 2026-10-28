@@ -8,6 +8,7 @@ import PatterCore
 final class HUDController {
     private weak var model: AppModel?
     private var panel: NSPanel?
+    private var sizer: PanelSizer?
     private var observers: [NSObjectProtocol] = []
 
     init(model: AppModel) {
@@ -33,16 +34,15 @@ final class HUDController {
     private func makePanelIfNeeded() {
         guard panel == nil, let model else { return }
 
-        let hosting = NSHostingController(rootView: HUDView().environmentObject(model))
-        hosting.sizingOptions = .preferredContentSize
-
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: HUDView.width, height: 120),
+            contentRect: NSRect(x: 0, y: 0, width: HUDView.maxWidth, height: 120),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        panel.contentViewController = hosting
+        let sizer = PanelSizer(panel: panel)
+        sizer.host(HUDView().environmentObject(model), alignment: .topLeading)
+        self.sizer = sizer
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -55,7 +55,7 @@ final class HUDController {
 
         if !panel.setFrameUsingName("PatterHUD"), let screen = NSScreen.main {
             let visible = screen.visibleFrame
-            panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - HUDView.width - 24, y: visible.maxY - 16))
+            panel.setFrameTopLeftPoint(NSPoint(x: visible.maxX - HUDView.maxWidth - 24, y: visible.maxY - 16))
         }
         panel.setFrameAutosaveName("PatterHUD")
         // Expanding near a screen edge would grow the card off screen.
@@ -70,10 +70,16 @@ final class HUDController {
 
 struct HUDView: View {
     /// Wide enough for a one-line session row: name, Claude's word, time, context.
-    static let width: CGFloat = 360
+    static let maxWidth: CGFloat = 360
+    /// Narrow enough to tuck away; the project name and time still fit.
+    static let minWidth: CGFloat = 250
 
     @EnvironmentObject private var model: AppModel
     @AppStorage("hudCollapsed") private var collapsed = false
+    /// The expanded card's width, set by dragging its right edge.
+    @AppStorage("hudWidth") private var storedWidth = Double(HUDView.maxWidth)
+    /// Where the pointer is over the card, for the resize grip.
+    @State private var hover: CGPoint?
 
     /// Every theme has the same structure; Liquid Glass only changes the
     /// material behind the card and the pill.
@@ -88,30 +94,43 @@ struct HUDView: View {
         .id(model.theme)
     }
 
+    private var width: CGFloat {
+        min(max(CGFloat(storedWidth), Self.minWidth), Self.maxWidth)
+    }
+
     private func setCollapsed(_ value: Bool) {
         collapsed = value
     }
 
     private var title: some View {
         HStack(spacing: 8) {
+            PatterLogo(size: 18)
             Text("Patter").font(.system(size: 12, weight: .bold))
-            Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
-                .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
         }
     }
 
+    /// As the card narrows it drops information rather than squashing it:
+    /// context %, then reset times, then Claude's word, then the active count.
     private var card: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 title
-                Spacer()
-                iconButton("chevron.up", label: "Collapse") { setCollapsed(true) }
+                Spacer(minLength: 8)
+                if width >= 270 {
+                    Text(model.summary.active == 0 ? "idle" : "\(model.summary.active) active")
+                        .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                        .lineLimit(1)
+                }
+                HStack(spacing: 4) {
+                    iconButton("chevron.up", label: "Collapse") { setCollapsed(true) }
+                    iconButton("xmark", label: "Close") { model.showHUD = false }
+                }
             }
-            .padding(.leading, 8)
+            .padding(.leading, 4)
             .padding(.trailing, 2)
             .padding(.bottom, 2)
 
-            UsageView(usage: model.usage, style: .compact)
+            UsageView(usage: model.usage, style: .compact, showsResets: width >= 310)
                 .padding(.horizontal, 10)
                 .padding(.bottom, 6)
 
@@ -119,13 +138,40 @@ struct HUDView: View {
                 Text("No sessions").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).padding(10)
             }
             ForEach(model.sessions) { session in
-                SessionRow(session: session, style: .compact) { model.open($0) }
+                SessionRow(
+                    session: session, style: .compact,
+                    showsDetail: width >= 280, showsContext: width >= 340
+                ) { model.open($0) }
+                .transition(.sessionRow)
             }
         }
+        .animatesSessions(model.sessions)
         .padding(8)
-        .frame(width: Self.width)
-        .background(WindowDragArea())
+        .frame(width: width)
+        // Drag to move; drag the right edge (inside the card's padding, so
+        // it never covers a row or a button) to resize.
+        .background(WindowDragArea(resize: .init(width: width, range: Self.minWidth...Self.maxWidth) { storedWidth = Double($0) }))
+        .overlay(alignment: .trailing) { resizeGrip }
+        .onContinuousHover { phase in
+            if case .active(let point) = phase { hover = point } else { hover = nil }
+        }
         .panelSurface(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Shows that the right edge resizes. The resize cursor alone isn't
+    /// enough: the HUD never makes Patter the active app, and macOS mostly
+    /// ignores cursor changes from an inactive app.
+    private var resizeGrip: some View {
+        let onEdge = (hover?.x ?? 0) >= width - WindowDragArea.edge
+        return Capsule()
+            .fill(onEdge ? Theme.textSecondary : Theme.textTertiary.opacity(0.5))
+            .frame(width: onEdge ? 4 : 3, height: 28)
+            .padding(.trailing, 3)
+            .opacity(hover == nil ? 0 : 1)
+            .animation(.easeOut(duration: 0.15), value: onEdge)
+            .animation(.easeOut(duration: 0.2), value: hover == nil)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private var pill: some View {
@@ -196,40 +242,95 @@ struct HUDView: View {
 /// Moves the window when dragged; calls `onClick` (if any) when clicked without
 /// moving. Put it behind content: SwiftUI buttons on top keep their clicks.
 struct WindowDragArea: NSViewRepresentable {
+    /// Lets the right edge resize the content's width instead of moving the window.
+    struct Resize {
+        var width: CGFloat
+        var range: ClosedRange<CGFloat>
+        var onChange: (CGFloat) -> Void
+    }
+
     var onClick: (() -> Void)?
+    var resize: Resize?
+    /// How far in from the right edge a drag resizes.
+    static let edge: CGFloat = 10
+
+    init(resize: Resize? = nil, onClick: (() -> Void)? = nil) {
+        self.resize = resize
+        self.onClick = onClick
+    }
 
     func makeNSView(context: Context) -> DragView { DragView() }
 
     func updateNSView(_ view: DragView, context: Context) {
         view.onClick = onClick
+        view.resize = resize
     }
 
     final class DragView: NSView {
         var onClick: (() -> Void)?
-        private var start: (mouse: NSPoint, origin: NSPoint)?
+        var resize: Resize?
+        private var edge: CGFloat { WindowDragArea.edge }
+        private enum Drag { case move(mouse: NSPoint, origin: NSPoint), resize(mouseX: CGFloat, width: CGFloat) }
+        private var drag: Drag?
         private var moved = false
 
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+        private func onEdge(_ event: NSEvent) -> Bool {
+            resize != nil && convert(event.locationInWindow, from: nil).x >= bounds.maxX - edge
+        }
+
+        // The panel never becomes key, so cursor rects don't apply: set the
+        // cursor by hand from an always-active tracking area.
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            addTrackingArea(NSTrackingArea(
+                rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self
+            ))
+        }
+
+        override func mouseMoved(with event: NSEvent) {
+            guard drag == nil else { return }
+            (onEdge(event) ? NSCursor.resizeLeftRight : NSCursor.arrow).set()
+        }
+
+        override func mouseExited(with event: NSEvent) {
+            if drag == nil { NSCursor.arrow.set() }
+        }
+
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }
-            start = (NSEvent.mouseLocation, window.frame.origin)
             moved = false
+            if let resize, onEdge(event) {
+                drag = .resize(mouseX: NSEvent.mouseLocation.x, width: resize.width)
+            } else {
+                drag = .move(mouse: NSEvent.mouseLocation, origin: window.frame.origin)
+            }
         }
 
         override func mouseDragged(with event: NSEvent) {
-            guard let window, let start else { return }
+            guard let window, let drag else { return }
             let mouse = NSEvent.mouseLocation
-            let dx = mouse.x - start.mouse.x, dy = mouse.y - start.mouse.y
-            // A few points of slop so a slightly shaky click still counts as a click.
-            if !moved && hypot(dx, dy) < 3 { return }
-            moved = true
-            window.setFrameOrigin(NSPoint(x: start.origin.x + dx, y: start.origin.y + dy))
+            switch drag {
+            case .resize(let startX, let width):
+                guard let resize else { return }
+                moved = true
+                let proposed = (width + mouse.x - startX).rounded()
+                resize.onChange(min(max(proposed, resize.range.lowerBound), resize.range.upperBound))
+            case .move(let start, let origin):
+                let dx = mouse.x - start.x, dy = mouse.y - start.y
+                // A few points of slop so a slightly shaky click still counts as a click.
+                if !moved && hypot(dx, dy) < 3 { return }
+                moved = true
+                window.setFrameOrigin(NSPoint(x: origin.x + dx, y: origin.y + dy))
+            }
         }
 
         override func mouseUp(with event: NSEvent) {
             if moved { window?.keepOnScreen() } else { onClick?() }
-            start = nil
+            drag = nil
+            (onEdge(event) ? NSCursor.resizeLeftRight : NSCursor.arrow).set()
         }
     }
 }

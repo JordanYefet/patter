@@ -5,12 +5,14 @@ import PatterCore
 /// Wraps the MacBook notch: small "ears" while sessions run, wider and orange
 /// when one needs you, and the full list on hover.
 ///
-/// The panel is resized to exactly the black shape on every state change, so
-/// it never sits invisibly over the menu bar eating clicks.
+/// The panel is resized to the black shape on every state change (shrinking
+/// a moment late, see PanelSizer), so it never sits invisibly over the menu
+/// bar eating clicks.
 @MainActor
 final class NotchController {
     private weak var model: AppModel?
     private var panel: NSPanel?
+    private var sizer: PanelSizer?
     private var resizeObserver: NSObjectProtocol?
     private var screenObserver: NSObjectProtocol?
     private var wantsVisible = false
@@ -60,6 +62,7 @@ final class NotchController {
             if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) }
             resizeObserver = nil
             self.panel = nil
+            sizer = nil
         }
         setVisible(wantsVisible)
     }
@@ -67,8 +70,6 @@ final class NotchController {
     private func makePanelIfNeeded() {
         guard panel == nil, let model else { return }
 
-        let hosting = NSHostingController(rootView: NotchView(notch: Self.notchSize).environmentObject(model))
-        hosting.sizingOptions = .preferredContentSize
 
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: Self.notchSize),
@@ -76,7 +77,9 @@ final class NotchController {
             backing: .buffered,
             defer: false
         )
-        panel.contentViewController = hosting
+        let sizer = PanelSizer(panel: panel)
+        sizer.host(NotchView(notch: Self.notchSize).environmentObject(model), alignment: .top)
+        self.sizer = sizer
         panel.isFloatingPanel = true
         // Above the menu bar so the shape can cover the notch area.
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
@@ -179,8 +182,10 @@ struct NotchView: View {
                 .padding(.bottom, 4)
             ForEach(model.sessions) { session in
                 SessionRow(session: session, style: .compact) { model.open($0) }
+                    .transition(.sessionRow)
             }
         }
+        .animatesSessions(model.sessions)
         .padding(.horizontal, 14)
         .padding(.bottom, 14)
         .frame(width: 480)

@@ -7,6 +7,9 @@ struct SessionRow: View {
 
     let session: Session
     var style: Style = .full
+    /// The HUD turns these off as it narrows; the menu and notch keep both.
+    var showsDetail = true
+    var showsContext = true
     var onOpen: (Session) -> Void = { _ in }
 
     @ThemePalette private var palette
@@ -65,6 +68,7 @@ struct SessionRow: View {
     private var detail: some View {
         switch session.phase {
         case .needsInput:
+            // Kept even when narrow: what Claude is asking for is the point.
             let title = Text(session.attention ?? "Needs your input").foregroundStyle(palette.attentionText)
             if let detail = session.attentionDetail {
                 title + Text("  ") + Text(detail).font(Theme.mono).foregroundStyle(palette.text)
@@ -73,10 +77,10 @@ struct SessionRow: View {
             }
 
         case .working:
-            Text(workingDetail).foregroundStyle(palette.textSecondary)
+            if showsDetail { Text(workingDetail).foregroundStyle(palette.textSecondary) }
 
         case .idle:
-            if let last = session.lastTurnDuration {
+            if showsDetail, let last = session.lastTurnDuration {
                 Text("Done in \(Format.duration(last))").foregroundStyle(palette.textTertiary)
             }
         }
@@ -105,7 +109,7 @@ struct SessionRow: View {
             time = "\(Format.shortDuration(since)) ago"
         }
         let base = Text(time).foregroundStyle(session.phase == .needsInput ? palette.attentionText : palette.textTertiary)
-        guard let ctx = session.context else { return base }
+        guard showsContext, let ctx = session.context else { return base }
         return base
             + Text(" · ").foregroundStyle(palette.textTertiary)
             + Text("ctx \(Format.percent(ctx.usedPercentage))").foregroundStyle(ctx.isHigh ? palette.attentionText : palette.textTertiary)

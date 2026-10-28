@@ -168,6 +168,16 @@ struct SessionStoreTests {
         #expect(store.orderedSessions.map(\.id) == ["blocked", "working", "idle"])
     }
 
+    @Test func orderingWithinAStateStaysPutAsSessionsWork() {
+        store.apply(hook("UserPromptSubmit", session: "first"))
+        store.apply(hook("UserPromptSubmit", at: 1, session: "second"))
+        store.apply(hook("PreToolUse", at: 2, session: "second", extra: ["tool_name": "Read"]))
+        store.apply(hook("PreToolUse", at: 3, session: "first", extra: ["tool_name": "Read"]))
+        #expect(store.orderedSessions.map(\.id) == ["first", "second"])
+        store.apply(hook("PreToolUse", at: 4, session: "second", extra: ["tool_name": "Edit"]))
+        #expect(store.orderedSessions.map(\.id) == ["first", "second"])
+    }
+
     @Test func eventsWithoutSessionIDAreIgnored() {
         let e = SpoolEvent(time: t0, kind: .hook, payload: JSONObject(["hook_event_name": "Stop"]))
         #expect(store.apply(e).isEmpty)

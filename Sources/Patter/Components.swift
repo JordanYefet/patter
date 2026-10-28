@@ -168,3 +168,54 @@ private struct ChipSurface<S: Shape>: ViewModifier {
         content.background(palette.chip, in: shape)
     }
 }
+
+/// The app icon, small, for the HUD and menu titles. Falls back to Clawd
+/// when there's no bundle icon (e.g. `swift run`).
+struct PatterLogo: View {
+    var size: CGFloat = 16
+
+    var body: some View {
+        Group {
+            if Bundle.main.bundleIdentifier != nil {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+            } else {
+                ClawdView(walking: false, cell: size / 18)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+extension AnyTransition {
+    /// A session arriving drops in from above, starting small and growing
+    /// into its row while the rows below make room; one leaving fades out and
+    /// shrinks slightly.
+    static var sessionRow: AnyTransition {
+        .asymmetric(
+            insertion: .opacity
+                .combined(with: .scale(scale: 0.7, anchor: .top))
+                .combined(with: .offset(y: -12)),
+            removal: .opacity.combined(with: .scale(scale: 0.92, anchor: .top))
+        )
+    }
+}
+
+extension View {
+    /// Animates session rows coming, going and moving between sections
+    /// (pair with `.transition(.sessionRow)` on each row). Off with Reduce Motion.
+    func animatesSessions(_ sessions: [Session]) -> some View {
+        modifier(SessionsAnimation(key: sessions.map { "\($0.id)/\($0.phase)" }))
+    }
+}
+
+private struct SessionsAnimation: ViewModifier {
+    let key: [String]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: key)
+    }
+}

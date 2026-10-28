@@ -19,11 +19,14 @@ public final class SessionStore {
 
     // MARK: - Reading
 
-    /// Needs-you first, then working, then idle; most recent first within each.
+    /// Needs-you first, then working, then idle. Within each, the order they
+    /// started in: activity never reshuffles the rows, only a change of state
+    /// moves one, and a new session joins at the end of its group.
     public var orderedSessions: [Session] {
         sessions.values.sorted {
             if $0.phase != $1.phase { return $0.phase < $1.phase }
-            return $0.lastEventAt > $1.lastEventAt
+            if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
+            return $0.id < $1.id
         }
     }
 
