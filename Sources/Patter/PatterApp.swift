@@ -38,6 +38,21 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section {
+                HStack(spacing: 12) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 44, height: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Patter").font(.headline)
+                        Text("Created by Jordan Yefet Berman").foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+                        Text("Version \(version)").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
             Section("Show") {
                 Toggle("Floating HUD", isOn: $model.showHUD)
                 Toggle("In the notch", isOn: $model.showNotch)
@@ -72,11 +87,18 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(Bundle.main.bundleIdentifier == nil)
-                LabeledContent("Spool folder", value: SpoolReader.defaultDirectory.path)
+                LabeledContent("Spool folder") {
+                    Text((SpoolReader.defaultDirectory.path as NSString).abbreviatingWithTildeInPath)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440)
+        // A grouped Form scrolls, so the window would open at a default height
+        // and hide the last sections: size it to fit them.
+        .frame(width: 440, height: 700)
         .padding(.vertical, 8)
     }
 }

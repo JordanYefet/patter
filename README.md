@@ -4,14 +4,26 @@
 
 It's built entirely on Claude Code's official extension points, [hooks](https://code.claude.com/docs/en/hooks) and the [status line](https://code.claude.com/docs/en/statusline). It doesn't scrape terminals or read transcripts, and it makes no network calls.
 
+Created by **Jordan Yefet Berman**.
+
 > Unofficial community project, not affiliated with or endorsed by Anthropic.
+
+<p align="center">
+  <img src="docs/images/menu.png" width="392" alt="The Patter menu: 5-hour and weekly usage, then sessions grouped into Needs you, Working and Recent">
+  &nbsp;
+  <img src="docs/images/hud.png" width="300" alt="The floating HUD with the same sessions in a compact card">
+</p>
+
+<p align="center">
+  <img src="docs/images/menubar-icon.png" width="460" alt="Menu bar icon states: working, needs you with a count badge, idle, and usage limit with a countdown, in orange and monochrome">
+</p>
 
 ## What you see
 
 | Placement | Best for |
 | --- | --- |
 | **Menu bar** (always on) | The full picture: each session's project, branch, current action, task progress, context window, plus account usage at the top. The icon is Clawd, the Claude Code mascot: it walks while anything is working, stands still when done, gets a yellow badge with a count when sessions need you, and turns grey with a red "!" and a countdown when you've hit your 5-hour or weekly limit. |
-| **Floating HUD** | A big single monitor. Always on top, never steals focus, drag it anywhere, collapse it to a pill. |
+| **Floating HUD** | A big single monitor. Always on top, never steals focus, drag it anywhere, collapse it to a pill (click anywhere on the pill to expand it again). |
 | **Notch** | Notched MacBooks. "Ears" grow out of the notch while sessions run, turn orange when one needs you, and the full list drops down on hover. |
 
 Per session:
@@ -28,9 +40,17 @@ Notifications: when a session needs you, and when a turn longer than 30s (config
 
 Appearance (Settings → Appearance):
 
+<p align="center">
+  <img src="docs/images/hud-pill.png" width="177" alt="The HUD collapsed to a pill: two sessions working, payments-api needs you">
+</p>
+
 - **Theme**: Patter (the default dark teal), Liquid Glass (macOS 26+), Claude, Graphite and Paper (light).
 - **Menu bar icon**: orange Clawd, or monochrome to match your other menu bar icons. In monochrome, an idle Clawd is drawn as an outline, so working and idle stay easy to tell apart.
 - **Animation**: Clawd's walk in the menu bar can be turned off. An idle Clawd is then drawn as an outline too.
+
+<p align="center">
+  <img src="docs/images/settings.png" width="442" alt="Patter's Settings window">
+</p>
 
 ## Requirements
 
@@ -133,4 +153,4 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT © 2026 Jordan Yefet
+MIT © 2026 Jordan Yefet Berman
