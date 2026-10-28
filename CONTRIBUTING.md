@@ -15,7 +15,7 @@ swift build && ./scripts/test.sh   # swift test, plus the flags needed without X
 swift run Patter
 ```
 
-Pull requests run the same checks on a macOS runner (`.github/workflows/ci.yml`).
+There's no CI: please run these before opening a pull request. Pull requests are tested by hand before merging.
 
 ## Reporting a bug
 
