@@ -80,9 +80,13 @@ struct SectionLabel: View {
     }
 }
 
+/// Liquid Glass needs macOS 26 to run and the macOS 26 SDK (Xcode 26,
+/// Swift 6.2) to build. Built with an older SDK, the theme is just hidden.
 enum LiquidGlass {
     static var isAvailable: Bool {
+        #if compiler(>=6.2)
         if #available(macOS 26, *) { return true }
+        #endif
         return false
     }
 }
@@ -138,13 +142,21 @@ private struct PanelSurface<S: Shape>: ViewModifier {
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
+        #if compiler(>=6.2)
         if Theme.isGlass, #available(macOS 26, *) {
             let tint = scheme == .dark ? Theme.palette.glassTint.dark : Theme.palette.glassTint.light
             content.glassEffect(.regular.tint(tint).interactive(interactive), in: shape)
         } else {
-            content.background(Theme.panel.opacity(0.94), in: shape)
-                .overlay(shape.stroke(Theme.border, lineWidth: 1))
+            solid(content)
         }
+        #else
+        solid(content)
+        #endif
+    }
+
+    private func solid(_ content: Content) -> some View {
+        content.background(Theme.panel.opacity(0.94), in: shape)
+            .overlay(shape.stroke(Theme.border, lineWidth: 1))
     }
 }
 
