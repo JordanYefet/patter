@@ -114,7 +114,12 @@ struct NotchView: View {
 
     private var blocked: Session? { model.sessions.first { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
-    private var palette: Palette { .notch }
+    /// Glass and light themes show their own dropdown below a black strip;
+    /// the dark themes are black throughout.
+    private var themedDropdown: Bool { Theme.isGlass || Theme.palette.colorScheme == .light }
+    /// A light theme's dropdown uses its own colors; everything else is dark.
+    private var lightDropdown: Bool { expanded && Theme.palette.colorScheme == .light }
+    private var palette: Palette { lightDropdown ? Theme.palette : .notch }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -124,8 +129,7 @@ struct NotchView: View {
                 ears
             }
         }
-        // Black in every theme, to match the hardware notch it extends.
-        .background(Color.black, in: UnevenRoundedRectangle(bottomLeadingRadius: expanded ? 24 : 12, bottomTrailingRadius: expanded ? 24 : 12))
+        .background { surface }
         .overlay(alignment: .top) {
             if blocked != nil && !expanded {
                 UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
@@ -148,10 +152,39 @@ struct NotchView: View {
                 }
             }
         }
-        .environment(\.colorScheme, .dark)
+        .environment(\.colorScheme, lightDropdown ? .light : .dark)
         .environment(\.paletteOverride, palette)
         .foregroundStyle(palette.text)
         .id(model.theme)
+    }
+
+    /// Black, to match the hardware notch it extends. In glass and light
+    /// themes the dropdown is the theme's own surface below a black strip
+    /// along the menu bar, so the top still reads as the notch.
+    ///
+    /// The layers are always there and only change size and opacity: swapping
+    /// one view for another would cross-fade instead of folding back up.
+    private var surface: some View {
+        let radius: CGFloat = expanded ? 24 : 12
+        let shape = UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
+        let strip = expanded && themedDropdown
+        return ZStack(alignment: .top) {
+            if themedDropdown {
+                dropdownFill(shape).opacity(expanded ? 1 : 0)
+            }
+            UnevenRoundedRectangle(bottomLeadingRadius: strip ? 0 : radius, bottomTrailingRadius: strip ? 0 : radius)
+                .fill(Color.black)
+                .frame(height: strip ? notch.height : nil)
+        }
+    }
+
+    @ViewBuilder
+    private func dropdownFill(_ shape: UnevenRoundedRectangle) -> some View {
+        if Theme.isGlass {
+            Color.clear.panelSurface(shape)
+        } else {
+            shape.fill(Theme.panel).overlay(shape.stroke(Theme.border, lineWidth: 1))
+        }
     }
 
     /// Collapsed: content to the left and right of the camera housing.
@@ -217,10 +250,10 @@ struct NotchView: View {
 }
 
 extension Palette {
-    /// The notch is black like the hardware it wraps, in every theme, so it
-    /// always uses dark colors: dark themes keep theirs, a light theme (Paper)
-    /// borrows Patter's, and glass stays flat (no glass beside a black notch;
-    /// its semantic colors resolve light under the forced dark appearance).
+    /// The folded notch is black like the hardware it wraps, in every theme,
+    /// so it always uses dark colors: dark themes keep theirs, a light theme
+    /// (Paper) borrows Patter's. Rows stay flat in Liquid Glass (never glass
+    /// in glass); only the dropdown's background is glass.
     static var notch: Palette {
         var palette = Theme.palette.colorScheme == .light ? Palette.patter : Theme.palette
         palette.glass = false
