@@ -15,6 +15,9 @@ final class PanelSizer {
     static let shrinkDelay: TimeInterval = 0.5
 
     private weak var panel: NSPanel?
+    /// Grow and shrink around the panel's center (the notch) instead of its
+    /// left edge, so the content never jumps sideways mid-resize.
+    private var centered = false
     private var target: CGSize = .zero
     private var pendingShrink: DispatchWorkItem?
 
@@ -25,6 +28,7 @@ final class PanelSizer {
     /// Makes `content` the panel's content, pinned to `alignment` (the window
     /// can briefly be bigger than it).
     func host<Content: View>(_ content: Content, alignment: Alignment) {
+        centered = alignment.horizontal == .center
         let root = content
             .background(GeometryReader { geo in
                 Color.clear
@@ -59,7 +63,8 @@ final class PanelSizer {
     private func setSize(_ size: CGSize) {
         guard let panel else { return }
         let frame = panel.frame
-        panel.setFrame(NSRect(x: frame.minX, y: frame.maxY - size.height, width: size.width, height: size.height), display: true)
+        let x = centered ? (frame.midX - size.width / 2).rounded() : frame.minX
+        panel.setFrame(NSRect(x: x, y: frame.maxY - size.height, width: size.width, height: size.height), display: true)
         panel.invalidateShadow()
     }
 }

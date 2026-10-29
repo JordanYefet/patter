@@ -110,6 +110,7 @@ struct NotchView: View {
     @EnvironmentObject private var model: AppModel
     let notch: CGSize
     @State private var expanded = false
+    @State private var collapse: Task<Void, Never>?
 
     private var blocked: Session? { model.sessions.first { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
@@ -133,7 +134,19 @@ struct NotchView: View {
         }
         .fixedSize()
         .onHover { hovering in
-            withAnimation(.spring(duration: 0.28)) { expanded = hovering && !model.sessions.isEmpty }
+            collapse?.cancel()
+            if hovering {
+                guard !expanded, !model.sessions.isEmpty else { return }
+                withAnimation(.spring(duration: 0.28)) { expanded = true }
+            } else {
+                // Fold a moment later: the window resizing under the pointer
+                // can report a brief exit, and folding on it would flicker.
+                collapse = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(.spring(duration: 0.28)) { expanded = false }
+                }
+            }
         }
         .environment(\.colorScheme, .dark)
         .environment(\.paletteOverride, palette)
