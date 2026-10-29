@@ -111,7 +111,9 @@ struct SettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
         .font(.system(size: 13))
         .foregroundStyle(Theme.text)
-        .tint(Theme.accent)
+        // Liquid Glass keeps its controls in the text color rather than the
+        // accent, so the window reads as one glass sheet.
+        .tint(Theme.isGlass ? Theme.text : Theme.accent)
         // Under the transparent title bar too (the window has a full-size
         // content view), so the whole window is one surface.
         .background { SettingsSurface().ignoresSafeArea() }
