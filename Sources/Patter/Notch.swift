@@ -111,6 +111,9 @@ struct NotchView: View {
     let notch: CGSize
     @State private var expanded = false
     @State private var collapse: Task<Void, Never>?
+    /// The needs-you ears' text widths, so the black shape can fit each side.
+    @State private var leftEar: CGFloat = 0
+    @State private var rightEar: CGFloat = 0
 
     private var blocked: Session? { model.sessions.first { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
@@ -134,6 +137,7 @@ struct NotchView: View {
             if blocked != nil && !expanded {
                 UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
                     .stroke(palette.attention.opacity(0.4), lineWidth: 1.5)
+                    .padding(earInsets)
             }
         }
         .fixedSize()
@@ -176,6 +180,15 @@ struct NotchView: View {
                 .fill(Color.black)
                 .frame(height: strip ? notch.height : nil)
         }
+        .padding(earInsets)
+    }
+
+    /// The needs-you ears are laid out equally wide, so the view stays
+    /// centered on the camera, but the shape is drawn only around each side's
+    /// text: the shorter side gets no extra room at its outer edge.
+    private var earInsets: EdgeInsets {
+        guard blocked != nil, !expanded else { return EdgeInsets() }
+        return EdgeInsets(top: 0, leading: max(0, rightEar - leftEar), bottom: 0, trailing: max(0, leftEar - rightEar))
     }
 
     @ViewBuilder
@@ -191,16 +204,21 @@ struct NotchView: View {
     @ViewBuilder
     private var ears: some View {
         if let blocked {
-            HStack(spacing: notch.width) {
-                HStack(spacing: 8) {
-                    AttentionDot()
-                    Text(blocked.projectName).font(.system(size: 12, weight: .semibold)).foregroundStyle(palette.attentionText).lineLimit(1)
-                }
-                .frame(width: 120, alignment: .leading)
-                Text(shortAttention(blocked)).font(.system(size: 12)).foregroundStyle(palette.attentionText).lineLimit(1)
-                    .frame(width: 120, alignment: .trailing)
+            let name = HStack(spacing: 8) {
+                AttentionDot()
+                Text(ActivityDescriber.truncate(blocked.projectName, 18))
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(palette.attentionText)
             }
-            .padding(.horizontal, 14)
+            let ask = Text(shortAttention(blocked)).font(.system(size: 12)).foregroundStyle(palette.attentionText)
+            // Both ears as wide as the longer of the two, no wider: they have
+            // to match so the shape stays centered on the camera. The text
+            // hugs the notch with the same gap on each side.
+            HStack(spacing: notch.width + 2 * 10) {
+                ZStack(alignment: .trailing) { name.onWidthChange { leftEar = $0 }; ask.hidden() }
+                ZStack(alignment: .leading) { name.hidden(); ask.onWidthChange { rightEar = $0 } }
+            }
+            .lineLimit(1)
+            .padding(.horizontal, 12)
             .frame(height: notch.height)
         } else if !working.isEmpty {
             HStack(spacing: notch.width) {
@@ -259,5 +277,16 @@ extension Palette {
         palette.glass = false
         palette.colorScheme = .dark
         return palette
+    }
+}
+
+private extension View {
+    /// Reports the view's width as it changes.
+    func onWidthChange(_ action: @escaping (CGFloat) -> Void) -> some View {
+        background(GeometryReader { geo in
+            Color.clear
+                .onAppear { action(geo.size.width) }
+                .onChange(of: geo.size.width) { _, width in action(width) }
+        })
     }
 }
