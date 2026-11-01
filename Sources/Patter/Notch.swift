@@ -117,8 +117,8 @@ struct NotchView: View {
 
     private var blocked: Session? { model.sessions.first { $0.phase == .needsInput } }
     private var working: [Session] { model.sessions.filter { $0.phase == .working } }
-    /// Glass and light themes show their own dropdown below a black strip;
-    /// the dark themes are black throughout.
+    /// Glass and light themes show their own dropdown hanging from the
+    /// notch; the dark themes are black throughout.
     private var themedDropdown: Bool { Theme.isGlass || Theme.palette.colorScheme == .light }
     /// A light theme's dropdown uses its own colors; everything else is dark.
     private var lightDropdown: Bool { expanded && Theme.palette.colorScheme == .light }
@@ -163,8 +163,9 @@ struct NotchView: View {
     }
 
     /// Black, to match the hardware notch it extends. In glass and light
-    /// themes the dropdown is the theme's own surface below a black strip
-    /// along the menu bar, so the top still reads as the notch.
+    /// themes the dropdown is the theme's own surface all the way up, and the
+    /// black shrinks into the camera housing, where the hardware hides it: a
+    /// black strip across the menu bar looks like a gap above glass.
     ///
     /// The layers are always there and only change size and opacity: swapping
     /// one view for another would cross-fade instead of folding back up.
@@ -176,9 +177,10 @@ struct NotchView: View {
             if themedDropdown {
                 dropdownFill(shape).opacity(expanded ? 1 : 0)
             }
-            UnevenRoundedRectangle(bottomLeadingRadius: strip ? 0 : radius, bottomTrailingRadius: strip ? 0 : radius)
+            // Rounder than the hardware's corners, so none of it peeks out.
+            UnevenRoundedRectangle(bottomLeadingRadius: strip ? 12 : radius, bottomTrailingRadius: strip ? 12 : radius)
                 .fill(Color.black)
-                .frame(height: strip ? notch.height : nil)
+                .frame(width: strip ? notch.width : nil, height: strip ? notch.height : nil)
         }
         .padding(earInsets)
     }
@@ -240,9 +242,11 @@ struct NotchView: View {
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Color.clear.frame(height: notch.height)
-            UsageView(usage: model.usage, style: .compact)
-                .padding(.horizontal, 12)
+            // The limits flank the camera, in the band the notch leaves
+            // empty along the menu bar.
+            UsageView(usage: model.usage, style: .split(gap: notch.width + 2 * 14))
+                .frame(maxWidth: .infinity)
+                .frame(height: notch.height)
                 .padding(.bottom, 4)
             ForEach(model.sessions) { session in
                 SessionRow(session: session, style: .compact) { model.open($0) }

@@ -4,7 +4,12 @@ import PatterCore
 /// 5-hour and weekly limits. Only Pro/Max subscriptions report these, and only
 /// after the first response in a session, so this view hides when there's no data.
 struct UsageView: View {
-    enum Style { case card, compact }
+    enum Style {
+        case card, compact
+        /// Compact meters pushed apart by `gap`, one each side of the notch.
+        /// Each keeps its side even when the other window is missing.
+        case split(gap: CGFloat)
+    }
 
     let usage: UsageLimits?
     var style: Style = .card
@@ -32,6 +37,20 @@ struct UsageView: View {
                         if let w = usage.fiveHour { MiniLimit(title: "5h", window: w, now: context.date, showsResets: showsResets) }
                         if usage.fiveHour != nil && usage.sevenDay != nil { divider }
                         if let w = usage.sevenDay { MiniLimit(title: "Week", window: w, now: context.date, showsResets: showsResets) }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                case .split(let gap):
+                    HStack(alignment: .top, spacing: gap) {
+                        if let w = usage.fiveHour {
+                            MiniLimit(title: "5h", window: w, now: context.date, showsResets: showsResets)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity, maxHeight: 0)
+                        }
+                        if let w = usage.sevenDay {
+                            MiniLimit(title: "Week", window: w, now: context.date, showsResets: showsResets)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity, maxHeight: 0)
+                        }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
